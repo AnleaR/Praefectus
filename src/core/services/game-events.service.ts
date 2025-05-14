@@ -1,1 +1,0 @@
-// TODO: Service for working with game events (Overwolf API)

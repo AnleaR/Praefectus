@@ -1,1 +1,0 @@
-// TODO: The general component of the button

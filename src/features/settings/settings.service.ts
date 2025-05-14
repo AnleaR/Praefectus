@@ -1,1 +1,0 @@
-// TODO: The logic of processing settings

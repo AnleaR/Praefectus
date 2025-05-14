@@ -1,1 +1,0 @@
-// TODO: Main application file, initialization of Overwolf and Electron

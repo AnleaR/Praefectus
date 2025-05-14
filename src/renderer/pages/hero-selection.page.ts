@@ -1,1 +1,0 @@
-// TODO: Hero selection page

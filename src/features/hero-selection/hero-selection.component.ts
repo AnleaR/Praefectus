@@ -1,1 +1,0 @@
-// TODO: The component for displaying the hero selection

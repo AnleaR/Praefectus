@@ -1,1 +1,0 @@
-// TODO: Modal window for settings

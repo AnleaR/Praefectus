@@ -1,1 +1,0 @@
-// TODO: The logic of choosing a hero, saving the data

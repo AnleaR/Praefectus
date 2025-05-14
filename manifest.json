@@ -4,7 +4,7 @@
   "meta": {
     "name": "Praefectus",
     "author": "AnleaR",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "minimum-overwolf-version": "128.0.0.1",
     "minimum-gep-version": "128.0.0.1",
     "description": "An AI-powered assistant for Dota 2 hero selection.",
@@ -18,7 +18,7 @@
   "data": {
     "game_targeting": {
       "type": "dedicated",
-      "game_ids": [570]
+      "game_ids": [7314]
     },
     "start_window": "main_window",
     "windows": {
@@ -41,12 +41,12 @@
         "debug_url": "http://localhost:3000"
       }
     },
-    "game_events": [570],
+    "game_events": [7314],
     "launch_events": [
       {
         "event": "GameLaunch",
         "event_data": {
-          "game_ids": [570]
+          "game_ids": [7314]
         },
         "start_minimized": false
       }

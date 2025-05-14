@@ -1,1 +1,0 @@
-// TODO: The logic of the main application (for example, launch)

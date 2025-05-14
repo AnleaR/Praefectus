@@ -1,1 +1,0 @@
-// TODO: A module that combines all the components

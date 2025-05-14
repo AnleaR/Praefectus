@@ -1,1 +1,0 @@
-// TODO: Configuration of the game and its events

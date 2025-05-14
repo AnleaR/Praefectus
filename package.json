@@ -1,6 +1,6 @@
 {
   "name": "praefectus",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An AI-powered assistant for Dota 2 hero selection.",
   "main": "dist/browser/index.js",
   "author": {
@@ -21,7 +21,7 @@
     "overwolf": {
       "disableAdOptimization": false
     },
-    "productName": "praefectus",
+    "productName": "Praefectus",
     "directories": {
       "output": "build"
     },
