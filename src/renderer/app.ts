@@ -1,1 +1,1 @@
-// TODO: Главная логика рендеринга UI
+// TODO: The main logic of UI rendering

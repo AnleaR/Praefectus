@@ -1,1 +1,1 @@
-// TODO: Сервис для работы с горячими клавишами
+// TODO: A service for working with hotkeys

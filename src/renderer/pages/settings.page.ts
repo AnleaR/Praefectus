@@ -1,1 +1,1 @@
-// TODO: Страница настроек
+// TODO: Settings page

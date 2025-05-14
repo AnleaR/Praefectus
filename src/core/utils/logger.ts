@@ -1,1 +1,1 @@
-// TODO: Логирование
+// TODO: Logging

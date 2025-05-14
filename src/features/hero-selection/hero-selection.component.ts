@@ -1,1 +1,1 @@
-// TODO: Компонент для отображения выбора героя
+// TODO: The component for displaying the hero selection

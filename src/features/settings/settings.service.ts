@@ -1,1 +1,1 @@
-// TODO: Логика обработки настроек
+// TODO: The logic of processing settings

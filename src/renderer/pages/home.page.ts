@@ -1,1 +1,1 @@
-// TODO: Главная страница
+// TODO: Main page

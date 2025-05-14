@@ -1,1 +1,1 @@
-// TODO: Общий компонент кнопки
+// TODO: The general component of the button

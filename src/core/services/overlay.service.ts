@@ -1,1 +1,1 @@
-// TODO: Сервис для управления оверлеем
+// TODO: Overlay management service

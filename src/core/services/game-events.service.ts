@@ -1,1 +1,1 @@
-// TODO: Сервис для работы с событиями игры (Overwolf API)
+// TODO: Service for working with game events (Overwolf API)

@@ -1,1 +1,1 @@
-// TODO: Конфигурация приложения
+// TODO: Application configuration

@@ -1,1 +1,1 @@
-// TODO: Компонент для отображения настроек
+// TODO: A component for displaying settings

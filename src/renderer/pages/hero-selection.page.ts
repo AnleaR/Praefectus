@@ -1,1 +1,1 @@
-// TODO: Страница выбора героя
+// TODO: Hero selection page

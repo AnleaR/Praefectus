@@ -1,1 +1,1 @@
-// TODO: Главный файл приложения, инициализация Overwolf и Electron
+// TODO: Main application file, initialization of Overwolf and Electron

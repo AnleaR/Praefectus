@@ -1,1 +1,1 @@
-// TODO: Модальное окно для настроек
+// TODO: Modal window for settings

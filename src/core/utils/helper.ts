@@ -1,1 +1,1 @@
-// TODO: Вспомогательные функции
+// TODO: Utility functions

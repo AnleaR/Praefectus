@@ -1,1 +1,1 @@
-В папке images содержаться изображения и иконки для UI
+Folder `images` must contain images and icons for UI.

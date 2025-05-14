@@ -1,1 +1,1 @@
-// TODO: Логика основного приложения (например, запуск)
+// TODO: The logic of the main application (for example, launch)

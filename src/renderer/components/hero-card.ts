@@ -1,1 +1,1 @@
-// TODO: Компонент для отображения информации о герое
+// TODO: A component for displaying information about a hero

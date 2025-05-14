@@ -1,0 +1,76 @@
+{
+  "manifest_version": 1,
+  "type": "WebApp",
+  "meta": {
+    "name": "Praefectus",
+    "author": "AnleaR",
+    "version": "0.1.0",
+    "minimum-overwolf-version": "128.0.0.1",
+    "minimum-gep-version": "128.0.0.1",
+    "description": "An AI-powered assistant for Dota 2 hero selection.",
+    "dock_button_title": "PRFCT",
+    "icon": "src/renderer/assets/icons/iconMouseOver.png",
+    "icon_gray": "src/renderer/assets/icons/iconMouseNormal.png",
+    "launcher_icon": "src/renderer/assets/icons/icon.ico",
+    "window_icon": "src/renderer/assets/icons/windowIcon.png",
+    "tray_icon": "src/renderer/assets/icons/trayIcon.png"
+  },
+  "permissions": ["Streaming", "Hotkeys", "GameInfo"],
+  "data": {
+    "game_targeting": {
+      "type": "dedicated",
+      "game_ids": [570]
+    },
+    "start_window": "main_window",
+    "windows": {
+      "main_window": {
+        "file": "index.html",
+        "show_in_taskbar": true,
+        "transparent": false,
+        "resizable": true,
+        "show_minimize": true,
+        "clickthrough": false,
+        "style": "standard",
+        "size": { "width": 800, "height": 600 },
+        "min_size": { "width": 400, "height": 300 },
+        "max_size": { "width": 1920, "height": 1080 },
+        "start_position": { "top": 100, "left": 100 },
+        "topmost": false,
+        "is_background_page": false,
+        "allow_local_file_access": true,
+        "dev_tools_window_style": false,
+        "debug_url": "http://localhost:3000"
+      }
+    },
+    "game_events": [
+      {
+        "game_id": 570,
+        "events": [
+          "match_start",
+          "match_end",
+          "hero_picked"
+        ]
+      }
+    ],
+    "launch_events": [
+      {
+        "event": "GameLaunch",
+        "event_data": {
+          "game_ids": [570]
+        },
+        "start_minimized": false
+      }
+    ],
+    "hotkeys": {
+      "open_window": {
+        "title": "Open Praefectus Window",
+        "action-type": "custom",
+        "default": "Ctrl+Shift+P"
+      }
+    },
+    "developer": {
+      "enable_auto_refresh": true,
+      "reload_delay": 1000
+    }
+  }
+}

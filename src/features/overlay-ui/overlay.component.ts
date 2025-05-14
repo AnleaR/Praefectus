@@ -1,1 +1,1 @@
-// TODO: Компонент оверлея
+// TODO: Overlay component

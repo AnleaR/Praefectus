@@ -1,1 +1,1 @@
-// TODO: Модуль, объединяющий все компоненты
+// TODO: A module that combines all the components

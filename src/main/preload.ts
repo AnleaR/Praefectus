@@ -1,1 +1,1 @@
-// TODO: Файл для взаимодействия между renderer и main процессом
+// TODO: A file for interaction between the renderer and the main process

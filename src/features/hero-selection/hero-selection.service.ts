@@ -1,1 +1,1 @@
-// TODO: Логика выбора героя, сохранение состояния
+// TODO: The logic of choosing a hero, saving the data
