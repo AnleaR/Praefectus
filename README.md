@@ -81,13 +81,13 @@ To add or remove Overwolf Electron packages (such as Game Events Provider, Overl
 
 ## Roadmap
 
-- ☑ Writing core application logic (version 0.1.0). 
+- ☑ Writing core application logic (version from 0.1.0 to 0.2.0). 
 
-- ☐ Overlay integration with Dota 2 using Overwolf (version 0.1.0a).
+- ☐ Overlay integration with Dota 2 using Overwolf (version from 0.2.0 to 0.3.0).
 
-- ☐ Hero suggestion system based on team compositions (version 0.1.1).
+- ☐ Hero suggestion system based on team compositions (version from 0.3.0 to 0.4.0).
 
-- ☐ AI model integration (version 0.1.2).
+- ☐ AI model integration (version from 0.4.0 to 1.0.0).
 
 - ☐ Player profile preferences and hero pool customization (version from 1.0.0 to 2.0.0).
 
