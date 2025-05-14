@@ -12,8 +12,7 @@
     "icon": "src/renderer/assets/icons/iconMouseOver.png",
     "icon_gray": "src/renderer/assets/icons/iconMouseNormal.png",
     "launcher_icon": "src/renderer/assets/icons/icon.ico",
-    "window_icon": "src/renderer/assets/icons/windowIcon.png",
-    "tray_icon": "src/renderer/assets/icons/trayIcon.png"
+    "window_icon": "src/renderer/assets/icons/windowIcon.png"
   },
   "permissions": ["Streaming", "Hotkeys", "GameInfo"],
   "data": {
@@ -42,16 +41,7 @@
         "debug_url": "http://localhost:3000"
       }
     },
-    "game_events": [
-      {
-        "game_id": 570,
-        "events": [
-          "match_start",
-          "match_end",
-          "hero_picked"
-        ]
-      }
-    ],
+    "game_events": [570],
     "launch_events": [
       {
         "event": "GameLaunch",
