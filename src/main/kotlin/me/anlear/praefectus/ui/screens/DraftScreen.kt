@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.launch
 import me.anlear.praefectus.data.repository.HeroRepository
 import me.anlear.praefectus.domain.DraftEngine
 import me.anlear.praefectus.domain.RecommendationEngine
@@ -33,7 +34,6 @@ fun DraftScreen(
     lang: Lang,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
     val draftEngine = remember { DraftEngine() }
     val recommendationEngine = remember { RecommendationEngine() }
 
@@ -48,7 +48,6 @@ fun DraftScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Load data
     LaunchedEffect(bracket) {
         loading = true
         error = null
@@ -57,7 +56,6 @@ fun DraftScreen(
             heroes = h.sortedBy { it.displayName }
             heroMap = h.associateBy { it.id }
             statsMap = heroRepository.getHeroStats(bracket)
-            // Load matchups for all heroes
             val allMatchups = mutableMapOf<Int, List<HeroMatchup>>()
             for (hero in h) {
                 try {
@@ -71,21 +69,11 @@ fun DraftScreen(
         loading = false
     }
 
-    // Compute recommendations
     val recommendTeam = if (pickTarget == PickTarget.DIRE) DraftTeam.DIRE else DraftTeam.RADIANT
     val recommendations = remember(draftState, matchupsMap, statsMap, roleFilter, recommendTeam) {
         if (heroes.isEmpty()) emptyList()
-        else recommendationEngine.recommend(
-            allHeroes = heroes,
-            draftState = draftState,
-            team = recommendTeam,
-            statsMap = statsMap,
-            matchupsMap = matchupsMap,
-            roleFilter = roleFilter
-        )
+        else recommendationEngine.recommend(heroes, draftState, recommendTeam, statsMap, matchupsMap, roleFilter)
     }
-
-    // Team synergies
     val synergyRadiant = remember(draftState.radiantPicks, matchupsMap) {
         draftEngine.calculateTeamSynergy(draftState.radiantPicks, matchupsMap)
     }
@@ -105,7 +93,7 @@ fun DraftScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize().padding(12.dp)) {
+    Column(modifier = modifier.fillMaxSize().padding(8.dp)) {
         if (loading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -124,95 +112,87 @@ fun DraftScreen(
             return@Column
         }
 
-        // Top bar: mode selector + rank + controls
+        // Toolbar: mode toggle + actions
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Mode toggle
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                ModeChip(Strings.get("all_pick", lang), draftMode == DraftMode.ALL_PICK) {
-                    draftMode = DraftMode.ALL_PICK
-                    draftState = draftEngine.reset(DraftMode.ALL_PICK)
+            // Mode toggle (segmented button style)
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(6.dp))
+            ) {
+                SegmentButton("AP", draftMode == DraftMode.ALL_PICK) {
+                    draftMode = DraftMode.ALL_PICK; draftState = draftEngine.reset(DraftMode.ALL_PICK)
                 }
-                ModeChip(Strings.get("captains_mode", lang), draftMode == DraftMode.CAPTAINS_MODE) {
-                    draftMode = DraftMode.CAPTAINS_MODE
-                    draftState = draftEngine.reset(DraftMode.CAPTAINS_MODE)
+                SegmentButton("CM", draftMode == DraftMode.CAPTAINS_MODE) {
+                    draftMode = DraftMode.CAPTAINS_MODE; draftState = draftEngine.reset(DraftMode.CAPTAINS_MODE)
                 }
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Undo
-                Button(
-                    onClick = { draftState = draftEngine.undo(draftState) },
-                    enabled = draftState.history.isNotEmpty(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DotaColors.Surface,
-                        contentColor = DotaColors.TextPrimary,
-                        disabledContainerColor = DotaColors.Surface.copy(alpha = 0.5f)
-                    ),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text(Strings.get("undo", lang), fontSize = 12.sp)
-                }
-                // Reset
-                Button(
-                    onClick = { draftState = draftEngine.reset(draftMode) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DotaColors.Dire.copy(alpha = 0.3f),
-                        contentColor = DotaColors.Dire
-                    ),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text(Strings.get("reset_draft", lang), fontSize = 12.sp)
-                }
-            }
-        }
-
-        // CM step indicator
-        if (draftMode == DraftMode.CAPTAINS_MODE && !draftState.isComplete()) {
-            val step = DraftState.CM_SEQUENCE.getOrNull(draftState.cmStepIndex)
-            if (step != null) {
-                val teamName = if (step.team == DraftTeam.RADIANT) Strings.get("radiant", lang) else Strings.get("dire", lang)
-                val actionName = if (step.type == DraftActionType.PICK) Strings.get("pick", lang) else Strings.get("ban", lang)
-                val teamColor = if (step.team == DraftTeam.RADIANT) DotaColors.Radiant else DotaColors.Dire
+            // Pick target (All Pick only)
+            if (draftMode == DraftMode.ALL_PICK) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(teamColor.copy(alpha = 0.1f))
-                        .border(1.dp, teamColor.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .clip(RoundedCornerShape(6.dp))
+                        .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(6.dp))
                 ) {
-                    Text(
-                        "${Strings.get("current_step", lang)}: $teamName — $actionName (${draftState.cmStepIndex + 1}/${DraftState.CM_SEQUENCE.size})",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = teamColor
-                    )
+                    TargetButton(Icons.Default.Shield, Strings.get("radiant", lang), pickTarget == PickTarget.RADIANT, DotaColors.Radiant) { pickTarget = PickTarget.RADIANT }
+                    TargetButton(Icons.Default.Shield, Strings.get("dire", lang), pickTarget == PickTarget.DIRE, DotaColors.Dire) { pickTarget = PickTarget.DIRE }
+                    TargetButton(Icons.Default.Block, Strings.get("ban", lang), pickTarget == PickTarget.BAN, DotaColors.TextSecondary) { pickTarget = PickTarget.BAN }
                 }
-                Spacer(Modifier.height(8.dp))
+            }
+
+            // CM step indicator
+            if (draftMode == DraftMode.CAPTAINS_MODE && !draftState.isComplete()) {
+                val step = DraftState.CM_SEQUENCE.getOrNull(draftState.cmStepIndex)
+                if (step != null) {
+                    val teamColor = if (step.team == DraftTeam.RADIANT) DotaColors.Radiant else DotaColors.Dire
+                    val actionIcon = if (step.type == DraftActionType.PICK) Icons.Default.CheckCircle else Icons.Default.Block
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(teamColor.copy(alpha = 0.1f))
+                            .border(1.dp, teamColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(actionIcon, null, tint = teamColor, modifier = Modifier.size(16.dp))
+                        Text(
+                            "${draftState.cmStepIndex + 1}/${DraftState.CM_SEQUENCE.size}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = teamColor
+                        )
+                    }
+                }
+            }
+
+            // Actions
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(
+                    onClick = { draftState = draftEngine.undo(draftState) },
+                    enabled = draftState.history.isNotEmpty(),
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.Undo, Strings.get("undo", lang), tint = if (draftState.history.isNotEmpty()) DotaColors.TextPrimary else DotaColors.TextSecondary.copy(0.3f), modifier = Modifier.size(18.dp))
+                }
+                IconButton(
+                    onClick = { draftState = draftEngine.reset(draftMode) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.RestartAlt, Strings.get("reset_draft", lang), tint = DotaColors.Dire, modifier = Modifier.size(18.dp))
+                }
             }
         }
 
-        // Pick target selector (All Pick mode only)
-        if (draftMode == DraftMode.ALL_PICK) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                PickTargetChip(Strings.get("radiant", lang), pickTarget == PickTarget.RADIANT, DotaColors.Radiant) { pickTarget = PickTarget.RADIANT }
-                PickTargetChip(Strings.get("dire", lang), pickTarget == PickTarget.DIRE, DotaColors.Dire) { pickTarget = PickTarget.DIRE }
-                PickTargetChip(Strings.get("ban", lang), pickTarget == PickTarget.BAN, DotaColors.TextSecondary) { pickTarget = PickTarget.BAN }
-            }
-        }
-
-        // Main content: Draft Panel + Hero Grid + Recommendations
+        // Main content
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Left: Draft panel
             DraftPanel(
@@ -221,7 +201,7 @@ fun DraftScreen(
                 teamSynergyRadiant = synergyRadiant,
                 teamSynergyDire = synergyDire,
                 lang = lang,
-                modifier = Modifier.width(280.dp)
+                modifier = Modifier.width(260.dp)
             )
 
             // Center: Hero grid
@@ -234,12 +214,12 @@ fun DraftScreen(
             )
 
             // Right: Recommendations
-            Column(modifier = Modifier.width(280.dp)) {
-                // Role filter for recommendations
-                Text(Strings.get("recommend", lang), fontWeight = FontWeight.Bold, fontSize = 14.sp, color = DotaColors.TextPrimary)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.padding(bottom = 6.dp)) {
-                    FilterChip(Strings.get("all_roles", lang), roleFilter == null) { roleFilter = null }
+            Column(modifier = Modifier.width(260.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                ) {
+                    FilterChip(Strings.get("all", lang), roleFilter == null) { roleFilter = null }
                     DotaRole.entries.forEach { role ->
                         FilterChip(Strings.get(role.locKey, lang), roleFilter == role) { roleFilter = role }
                     }
@@ -248,9 +228,7 @@ fun DraftScreen(
                 RecommendationList(
                     recommendations = recommendations,
                     lang = lang,
-                    onHeroClick = { heroId ->
-                        heroMap[heroId]?.let { onHeroClick(it) }
-                    },
+                    onHeroClick = { heroId -> heroMap[heroId]?.let { onHeroClick(it) } },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -259,29 +237,40 @@ fun DraftScreen(
 }
 
 @Composable
-fun ModeChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun SegmentButton(label: String, isSelected: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
             .background(if (isSelected) DotaColors.Accent.copy(alpha = 0.2f) else Color.Transparent)
-            .border(1.dp, if (isSelected) DotaColors.Accent else DotaColors.SurfaceBorder, RoundedCornerShape(4.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 12.sp, color = if (isSelected) DotaColors.Accent else DotaColors.TextSecondary)
+        Text(
+            label,
+            fontSize = 13.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) DotaColors.Accent else DotaColors.TextSecondary
+        )
     }
 }
 
 @Composable
-fun PickTargetChip(label: String, isSelected: Boolean, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
-    Box(
+private fun TargetButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(if (isSelected) color.copy(alpha = 0.2f) else Color.Transparent)
-            .border(1.dp, if (isSelected) color else DotaColors.SurfaceBorder, RoundedCornerShape(4.dp))
+            .background(if (isSelected) color.copy(alpha = 0.15f) else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        Icon(icon, null, tint = if (isSelected) color else DotaColors.TextSecondary, modifier = Modifier.size(14.dp))
         Text(label, fontSize = 11.sp, color = if (isSelected) color else DotaColors.TextSecondary)
     }
 }

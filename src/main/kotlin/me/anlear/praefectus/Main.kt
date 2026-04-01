@@ -1,18 +1,17 @@
 package me.anlear.praefectus
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import me.anlear.praefectus.data.api.StratzApiClient
@@ -42,18 +41,46 @@ fun main() = application {
     var currentScreen by remember { mutableStateOf(Screen.DRAFT) }
     var showTokenDialog by remember { mutableStateOf(Config.apiToken.isBlank()) }
 
+    val initialPlacement = if (Config.windowMaximized) WindowPlacement.Maximized else WindowPlacement.Floating
+    val initialPosition = if (Config.windowX >= 0 && Config.windowY >= 0)
+        WindowPosition(Config.windowX.dp, Config.windowY.dp)
+    else
+        WindowPosition.PlatformDefault
+    val initialSize = DpSize(Config.windowWidth.dp, Config.windowHeight.dp)
+
+    val windowState = rememberWindowState(
+        placement = initialPlacement,
+        position = initialPosition,
+        size = initialSize
+    )
+
+    // Persist window state on changes
+    LaunchedEffect(windowState.size, windowState.position, windowState.placement) {
+        snapshotFlow { Triple(windowState.size, windowState.position, windowState.placement) }
+            .collect { (size, position, placement) ->
+                Config.windowMaximized = placement == WindowPlacement.Maximized
+                if (placement != WindowPlacement.Maximized) {
+                    Config.windowWidth = size.width.value.toInt()
+                    Config.windowHeight = size.height.value.toInt()
+                    if (position.x.value >= 0 && position.y.value >= 0) {
+                        Config.windowX = position.x.value.toInt()
+                        Config.windowY = position.y.value.toInt()
+                    }
+                }
+            }
+    }
+
     Window(
         onCloseRequest = {
             apiClient.close()
             exitApplication()
         },
         title = Strings.get("app_title", lang),
-        state = rememberWindowState(size = DpSize(1440.dp, 900.dp))
+        state = windowState
     ) {
-        window.minimumSize = java.awt.Dimension(1280, 720)
+        window.minimumSize = java.awt.Dimension(640, 360)
 
         PraefectusTheme {
-            // Token prompt dialog
             if (showTokenDialog) {
                 TokenDialog(
                     lang = lang,
@@ -66,16 +93,14 @@ fun main() = application {
             }
 
             Row(modifier = Modifier.fillMaxSize().background(DotaColors.Background)) {
-                // Navigation rail
                 NavigationRail(
                     currentScreen = currentScreen,
                     lang = lang,
                     onNavigate = { currentScreen = it }
                 )
 
-                // Main content
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Top bar with rank selector
+                    // Top bar
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -92,27 +117,16 @@ fun main() = application {
                         )
 
                         if (currentScreen != Screen.SETTINGS) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    Strings.get("rank_bracket", lang) + ":",
-                                    fontSize = 12.sp,
-                                    color = DotaColors.TextSecondary
-                                )
-                                RankSelector(
-                                    selected = bracket,
-                                    onSelect = {
-                                        bracket = it
-                                        Config.rankBracket = it.apiName
-                                    }
-                                )
-                            }
+                            RankSelector(
+                                selected = bracket,
+                                onSelect = {
+                                    bracket = it
+                                    Config.rankBracket = it.apiName
+                                }
+                            )
                         }
                     }
 
-                    // Screen content
                     when (currentScreen) {
                         Screen.DRAFT -> DraftScreen(
                             heroRepository = heroRepository,

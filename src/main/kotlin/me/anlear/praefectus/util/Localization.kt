@@ -25,7 +25,7 @@ object Strings {
         "meta" to mapOf(Lang.RU to "Мета", Lang.EN to "Meta"),
         "all_pick" to mapOf(Lang.RU to "All Pick", Lang.EN to "All Pick"),
         "captains_mode" to mapOf(Lang.RU to "Captains Mode", Lang.EN to "Captains Mode"),
-        "rank_bracket" to mapOf(Lang.RU to "Бракет ранга", Lang.EN to "Rank Bracket"),
+        "rank_bracket" to mapOf(Lang.RU to "Ранг", Lang.EN to "Rank"),
         "update_data" to mapOf(Lang.RU to "Обновить данные", Lang.EN to "Update Data"),
         "api_token" to mapOf(Lang.RU to "API Токен", Lang.EN to "API Token"),
         "language" to mapOf(Lang.RU to "Язык", Lang.EN to "Language"),

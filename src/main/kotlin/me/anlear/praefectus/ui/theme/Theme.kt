@@ -29,7 +29,7 @@ object DotaColors {
     val StrAttribute = Color(0xFFEF4444)
     val AgiAttribute = Color(0xFF4ADE80)
     val IntAttribute = Color(0xFF3B82F6)
-    val UniAttribute = Color(0xFFCB6CE6)
+    val UniAttribute = Color(0xFFF5A623)
 }
 
 private val DarkColorScheme = darkColorScheme(

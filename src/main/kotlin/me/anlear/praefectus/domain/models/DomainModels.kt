@@ -16,15 +16,15 @@ data class Hero(
         }
 }
 
-enum class HeroAttribute(val apiName: String, val displayShort: String) {
-    STRENGTH("STRENGTH", "Str"),
-    AGILITY("AGILITY", "Agi"),
-    INTELLIGENCE("INTELLIGENCE", "Int"),
-    UNIVERSAL("UNIVERSAL", "Uni");
+enum class HeroAttribute(val apiNames: List<String>, val displayShort: String) {
+    STRENGTH(listOf("str", "STRENGTH"), "Str"),
+    AGILITY(listOf("agi", "AGILITY"), "Agi"),
+    INTELLIGENCE(listOf("int", "INTELLIGENCE"), "Int"),
+    UNIVERSAL(listOf("all", "UNIVERSAL"), "Uni");
 
     companion object {
         fun fromApi(value: String): HeroAttribute =
-            entries.find { it.apiName.equals(value, ignoreCase = true) } ?: UNIVERSAL
+            entries.find { attr -> attr.apiNames.any { it.equals(value, ignoreCase = true) } } ?: UNIVERSAL
     }
 }
 
@@ -77,16 +77,19 @@ data class HeroMatchup(
     val winRate: Double get() = if (matchCount > 0) winCount.toDouble() / matchCount * 100 else 0.0
 }
 
-enum class RankBracket(val apiName: String, val display: String) {
-    HERALD_GUARDIAN("HERALD_GUARDIAN", "Herald/Guardian"),
-    CRUSADER_ARCHON("CRUSADER_ARCHON", "Crusader/Archon"),
-    LEGEND_ANCIENT("LEGEND_ANCIENT", "Legend/Ancient"),
-    DIVINE_IMMORTAL("DIVINE_IMMORTAL", "Divine/Immortal"),
-    IMMORTAL("IMMORTAL", "Immortal");
+enum class RankBracket(val apiName: String, val display: String, val iconIndex: Int) {
+    HERALD("HERALD", "Herald", 1),
+    GUARDIAN("GUARDIAN", "Guardian", 2),
+    CRUSADER("CRUSADER", "Crusader", 3),
+    ARCHON("ARCHON", "Archon", 4),
+    LEGEND("LEGEND", "Legend", 5),
+    ANCIENT("ANCIENT", "Ancient", 6),
+    DIVINE("DIVINE", "Divine", 7),
+    IMMORTAL("IMMORTAL", "Immortal", 8);
 
     companion object {
         fun fromString(s: String): RankBracket =
-            entries.find { it.apiName == s } ?: DIVINE_IMMORTAL
+            entries.find { it.apiName == s } ?: DIVINE
     }
 }
 
@@ -121,34 +124,40 @@ data class DraftState(
     }
 
     companion object {
-        // CM draft sequence: B=Ban, P=Pick, R=Radiant, D=Dire
+        // CM draft sequence (F=first pick, S=second pick, B=ban, P=pick):
+        // FB FB SB SB FB SB SB FP SP FB FB SB SP FP FP SP SP FP FB SB FB SB FP SP
+        // F=RADIANT (first pick team), S=DIRE (second pick team)
         val CM_SEQUENCE: List<DraftAction> = listOf(
-            // Ban Phase 1
-            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),
-            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),
-            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),
-            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),
-            // Pick Phase 1
-            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),
-            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),
-            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),
-            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),
-            // Ban Phase 2
-            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),
-            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),
-            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),
-            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),
-            // Pick Phase 2
-            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),
-            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),
-            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),
-            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),
-            // Ban Phase 3
-            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),
-            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),
-            // Pick Phase 3
-            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),
-            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),
+            // Ban Phase 1: FB FB SB SB FB SB SB
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 1
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 2
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 3
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 4
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 5
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 6
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 7
+            // Pick Phase 1: FP SP
+            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),  // 8
+            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),     // 9
+            // Ban Phase 2: FB FB SB
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 10
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 11
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 12
+            // Pick Phase 2: SP FP FP SP SP FP
+            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),     // 13
+            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),  // 14
+            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),  // 15
+            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),     // 16
+            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),     // 17
+            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),  // 18
+            // Ban Phase 3: FB SB FB SB
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 19
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 20
+            DraftAction(DraftTeam.RADIANT, DraftActionType.BAN),   // 21
+            DraftAction(DraftTeam.DIRE, DraftActionType.BAN),      // 22
+            // Pick Phase 3: FP SP
+            DraftAction(DraftTeam.RADIANT, DraftActionType.PICK),  // 23
+            DraftAction(DraftTeam.DIRE, DraftActionType.PICK),     // 24
         )
     }
 }

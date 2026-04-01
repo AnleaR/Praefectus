@@ -54,8 +54,7 @@ class StratzApiClient(private val tokenProvider: () -> String) {
                   name
                   displayName
                   shortName
-                  primaryAttribute
-                  attackType
+                  stats { primaryAttribute attackType }
                   roles { roleId level }
                 }
               }

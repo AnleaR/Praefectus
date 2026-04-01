@@ -33,9 +33,14 @@ data class ApiHero(
     val name: String,
     val displayName: String,
     val shortName: String,
-    val primaryAttribute: String,
-    val attackType: String,
+    val stats: ApiHeroStats? = null,
     val roles: List<ApiHeroRole>? = null
+)
+
+@Serializable
+data class ApiHeroStats(
+    val primaryAttribute: String? = null,
+    val attackType: String? = null
 )
 
 @Serializable

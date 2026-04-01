@@ -47,8 +47,8 @@ class HeroRepository(private val api: StratzApiClient) {
                         it[name] = h.name
                         it[displayName] = h.displayName
                         it[shortName] = h.shortName
-                        it[primaryAttribute] = h.primaryAttribute
-                        it[attackType] = h.attackType
+                        it[primaryAttribute] = h.stats?.primaryAttribute ?: "all"
+                        it[attackType] = h.stats?.attackType ?: "Melee"
                         it[roles] = json.encodeToString(h.roles?.map { r -> "${r.roleId}:${r.level}" } ?: emptyList<String>())
                         it[updatedAt] = System.currentTimeMillis()
                     }

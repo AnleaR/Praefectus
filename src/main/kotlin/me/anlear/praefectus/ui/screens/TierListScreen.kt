@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,6 +36,7 @@ fun TierListScreen(
     var heroes by remember { mutableStateOf<List<Hero>>(emptyList()) }
     var statsMap by remember { mutableStateOf<Map<Int, HeroStats>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
     var roleFilter by remember { mutableStateOf<DotaRole?>(null) }
     var sortColumn by remember { mutableStateOf(SortColumn.WINRATE) }
     var sortAscending by remember { mutableStateOf(false) }
@@ -44,14 +44,20 @@ fun TierListScreen(
 
     LaunchedEffect(bracket) {
         loading = true
+        error = null
         try {
             heroes = heroRepository.getHeroes().sortedBy { it.displayName }
+        } catch (e: Exception) {
+            error = "Heroes: ${e.message}"
+        }
+        try {
             statsMap = heroRepository.getHeroStats(bracket)
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            error = (error?.let { "$it | " } ?: "") + "Stats: ${e.message}"
+        }
         loading = false
     }
 
-    // Filter and compute tiers
     val entries = remember(heroes, statsMap, roleFilter, sortColumn, sortAscending, minMatches) {
         val filtered = heroes.filter { hero ->
             val stats = statsMap[hero.id]
@@ -66,7 +72,7 @@ fun TierListScreen(
 
         val totalCount = winRates.size
         val tierEntries = winRates.mapIndexed { index, (hero, _) ->
-            val percentile = index.toDouble() / totalCount
+            val percentile = if (totalCount > 0) index.toDouble() / totalCount else 0.5
             val tier = when {
                 percentile < 0.10 -> TierRank.S
                 percentile < 0.30 -> TierRank.A
@@ -88,14 +94,6 @@ fun TierListScreen(
     }
 
     Column(modifier = modifier.fillMaxSize().padding(12.dp)) {
-        Text(
-            Strings.get("tier_list", lang),
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = DotaColors.TextPrimary
-        )
-        Spacer(Modifier.height(8.dp))
-
         // Role filter
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -114,10 +112,31 @@ fun TierListScreen(
             return@Column
         }
 
+        if (error != null) {
+            Text(
+                "${Strings.get("error", lang)}: $error",
+                fontSize = 12.sp,
+                color = DotaColors.Dire,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
+
+        if (entries.isEmpty() && !loading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    Strings.get("no_data", lang),
+                    color = DotaColors.TextSecondary,
+                    fontSize = 14.sp
+                )
+            }
+            return@Column
+        }
+
         // Header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(RoundedCornerShape(4.dp))
                 .background(DotaColors.BackgroundSecondary)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -160,7 +179,7 @@ fun SortableHeader(
     modifier: Modifier,
     onClick: (SortColumn) -> Unit
 ) {
-    val arrow = if (currentSort == column) { if (ascending) " ▲" else " ▼" } else ""
+    val arrow = if (currentSort == column) { if (ascending) " \u25B2" else " \u25BC" } else ""
     Text(
         "$label$arrow",
         fontSize = 11.sp,
@@ -190,18 +209,13 @@ fun TierRow(entry: TierEntry) {
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Hero
         Row(modifier = Modifier.weight(2f), verticalAlignment = Alignment.CenterVertically) {
             HeroIcon(hero = entry.hero, size = 28)
             Spacer(Modifier.width(6.dp))
             Text(entry.hero.displayName, fontSize = 12.sp, color = DotaColors.TextPrimary)
         }
 
-        // Tier
-        Box(
-            modifier = Modifier.weight(0.7f),
-            contentAlignment = Alignment.Center
-        ) {
+        Box(modifier = Modifier.weight(0.7f), contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(4.dp))
@@ -213,41 +227,14 @@ fun TierRow(entry: TierEntry) {
             }
         }
 
-        // Win Rate
         val wrColor = when {
             entry.stats.winRate >= 53 -> DotaColors.ScoreGood
             entry.stats.winRate >= 48 -> DotaColors.TextPrimary
             else -> DotaColors.ScoreBad
         }
-        Text(
-            "${"%.1f".format(entry.stats.winRate)}%",
-            fontSize = 12.sp,
-            color = wrColor,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Pick Rate
-        Text(
-            "${entry.stats.pickCount}",
-            fontSize = 12.sp,
-            color = DotaColors.TextSecondary,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Ban Rate
-        Text(
-            "${entry.stats.banCount}",
-            fontSize = 12.sp,
-            color = DotaColors.TextSecondary,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Matches
-        Text(
-            "${entry.stats.matchCount}",
-            fontSize = 12.sp,
-            color = DotaColors.TextSecondary,
-            modifier = Modifier.weight(1f)
-        )
+        Text("${"%.1f".format(entry.stats.winRate)}%", fontSize = 12.sp, color = wrColor, modifier = Modifier.weight(1f))
+        Text("${entry.stats.pickCount}", fontSize = 12.sp, color = DotaColors.TextSecondary, modifier = Modifier.weight(1f))
+        Text("${entry.stats.banCount}", fontSize = 12.sp, color = DotaColors.TextSecondary, modifier = Modifier.weight(1f))
+        Text("${entry.stats.matchCount}", fontSize = 12.sp, color = DotaColors.TextSecondary, modifier = Modifier.weight(1f))
     }
 }

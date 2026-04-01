@@ -30,9 +30,45 @@ object Config {
         }
 
     var rankBracket: String
-        get() = props.getProperty("rank_bracket", "DIVINE_IMMORTAL")
+        get() = props.getProperty("rank_bracket", "DIVINE")
         set(value) {
             props.setProperty("rank_bracket", value)
+            save()
+        }
+
+    // Window state persistence
+    var windowWidth: Int
+        get() = props.getProperty("window_width", "1280").toIntOrNull() ?: 1280
+        set(value) {
+            props.setProperty("window_width", value.toString())
+            save()
+        }
+
+    var windowHeight: Int
+        get() = props.getProperty("window_height", "720").toIntOrNull() ?: 720
+        set(value) {
+            props.setProperty("window_height", value.toString())
+            save()
+        }
+
+    var windowX: Int
+        get() = props.getProperty("window_x", "-1").toIntOrNull() ?: -1
+        set(value) {
+            props.setProperty("window_x", value.toString())
+            save()
+        }
+
+    var windowY: Int
+        get() = props.getProperty("window_y", "-1").toIntOrNull() ?: -1
+        set(value) {
+            props.setProperty("window_y", value.toString())
+            save()
+        }
+
+    var windowMaximized: Boolean
+        get() = props.getProperty("window_maximized", "false").toBoolean()
+        set(value) {
+            props.setProperty("window_maximized", value.toString())
             save()
         }
 
