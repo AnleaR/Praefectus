@@ -78,7 +78,7 @@ Score(hero) = Σ(vs_enemy_advantage) × 1.5
 
 ## License
 
-This project is licensed under the BSL License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the AGPL License — see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

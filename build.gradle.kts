@@ -63,6 +63,13 @@ compose.desktop {
             targetFormats(TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Praefectus"
             packageVersion = "1.0.0"
+
+            windows {
+                iconFile.set(project.file("src/main/resources/icon_colored.png"))
+            }
+            linux {
+                iconFile.set(project.file("src/main/resources/icon_colored.png"))
+            }
         }
     }
 }

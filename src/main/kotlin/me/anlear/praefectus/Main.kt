@@ -2,6 +2,7 @@ package me.anlear.praefectus
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -9,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
@@ -76,11 +78,13 @@ fun main() = application {
             exitApplication()
         },
         title = Strings.get("app_title", lang),
-        state = windowState
+        state = windowState,
+        icon = painterResource("icon_colored.png")
     ) {
         window.minimumSize = java.awt.Dimension(640, 360)
 
         PraefectusTheme {
+            SelectionContainer {
             if (showTokenDialog) {
                 TokenDialog(
                     lang = lang,
@@ -122,7 +126,8 @@ fun main() = application {
                                 onSelect = {
                                     bracket = it
                                     Config.rankBracket = it.apiName
-                                }
+                                },
+                                lang = lang
                             )
                         }
                     }
@@ -148,6 +153,7 @@ fun main() = application {
                     }
                 }
             }
+            } // SelectionContainer
         }
     }
 }

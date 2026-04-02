@@ -21,11 +21,11 @@ object DotaColors {
     val ScoreGood = Color(0xFF4ADE80)
     val ScoreBad = Color(0xFFEF4444)
     val ScoreNeutral = Color(0xFFFBBF24)
-    val TierS = Color(0xFFFF6B6B)
-    val TierA = Color(0xFFFFA726)
-    val TierB = Color(0xFFFBBF24)
-    val TierC = Color(0xFF66BB6A)
-    val TierD = Color(0xFF42A5F5)
+    val TierS = Color(0xFFBB86FC)   // Purple — best
+    val TierA = Color(0xFFFFD54F)   // Gold
+    val TierB = Color(0xFF81C784)   // Green
+    val TierC = Color(0xFF64B5F6)   // Blue
+    val TierD = Color(0xFF9E9E9E)   // Gray — worst
     val StrAttribute = Color(0xFFEF4444)
     val AgiAttribute = Color(0xFF4ADE80)
     val IntAttribute = Color(0xFF3B82F6)

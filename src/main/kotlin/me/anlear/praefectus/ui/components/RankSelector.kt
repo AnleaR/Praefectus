@@ -23,6 +23,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.anlear.praefectus.domain.models.RankBracket
 import me.anlear.praefectus.ui.theme.DotaColors
+import me.anlear.praefectus.util.Lang
+import me.anlear.praefectus.util.Strings
 import java.net.URI
 import javax.imageio.ImageIO
 
@@ -37,11 +39,21 @@ fun RankMedalIcon(bracket: RankBracket, size: Int = 28) {
         if (bitmap != null) return@LaunchedEffect
         loading = true
         bitmap = withContext(Dispatchers.IO) {
-            try {
-                val url = "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/rank_icons/rank_icon_${bracket.iconIndex}.png"
-                val img = ImageIO.read(URI(url).toURL())
-                img?.toComposeImageBitmap()?.also { rankIconCache[bracket.iconIndex] = it }
-            } catch (_: Exception) { null }
+            // Try multiple URL patterns for Dota 2 rank icons
+            val urls = listOf(
+                "https://cdn.stratz.com/images/dota2/seasonal_rank/medal_${bracket.iconIndex}.png",
+            )
+            for (url in urls) {
+                try {
+                    val img = ImageIO.read(URI(url).toURL())
+                    if (img != null) {
+                        val bmp = img.toComposeImageBitmap()
+                        rankIconCache[bracket.iconIndex] = bmp
+                        return@withContext bmp
+                    }
+                } catch (_: Exception) { }
+            }
+            null
         }
         loading = false
     }
@@ -59,7 +71,7 @@ fun RankMedalIcon(bracket: RankBracket, size: Int = 28) {
                 strokeWidth = 1.dp,
                 color = DotaColors.Accent
             )
-            else -> Text(bracket.display.take(2), fontSize = (size / 3).sp, color = DotaColors.TextSecondary)
+            else -> Text(bracket.display.take(3), fontSize = (size / 3).sp, color = DotaColors.TextSecondary)
         }
     }
 }
@@ -68,6 +80,7 @@ fun RankMedalIcon(bracket: RankBracket, size: Int = 28) {
 fun RankSelector(
     selected: RankBracket,
     onSelect: (RankBracket) -> Unit,
+    lang: Lang = Lang.EN,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -84,7 +97,7 @@ fun RankSelector(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             RankMedalIcon(selected, size = 28)
-            Text(selected.display, fontSize = 13.sp, color = DotaColors.TextPrimary)
+            Text(Strings.get(selected.locKey, lang), fontSize = 13.sp, color = DotaColors.TextPrimary)
             Text("\u25BE", fontSize = 11.sp, color = DotaColors.TextSecondary)
         }
 
@@ -101,7 +114,7 @@ fun RankSelector(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             RankMedalIcon(bracket, size = 28)
-                            Text(bracket.display, color = DotaColors.TextPrimary, fontSize = 13.sp)
+                            Text(Strings.get(bracket.locKey, lang), color = DotaColors.TextPrimary, fontSize = 13.sp)
                         }
                     },
                     onClick = {

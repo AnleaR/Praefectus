@@ -22,14 +22,10 @@ class StratzApiClient(private val tokenProvider: () -> String) {
         }
     }
 
-    private suspend fun query(graphql: String, variables: Map<String, Any?> = emptyMap()): String {
+    private suspend fun query(graphql: String): String {
         val body = buildString {
             append("""{"query":""")
             append(json.encodeToString(kotlinx.serialization.serializer<String>(), graphql))
-            if (variables.isNotEmpty()) {
-                append(""","variables":""")
-                append(json.encodeToString(kotlinx.serialization.serializer<Map<String, Any?>>(), variables))
-            }
             append("}")
         }
 
@@ -82,16 +78,18 @@ class StratzApiClient(private val tokenProvider: () -> String) {
         return resp.data?.constants?.gameVersions ?: emptyList()
     }
 
-    suspend fun fetchHeroStats(bracketId: String, patchId: Int): List<ApiHeroStat> {
+    /**
+     * Fetch hero win/match stats using winWeek.
+     * bracketId uses RankBracket enum (HERALD, GUARDIAN, ..., IMMORTAL).
+     */
+    suspend fun fetchHeroStats(bracketId: String): List<ApiHeroWinEntry> {
         val q = """
             query {
               heroStats {
-                stats(bracketIds: [$bracketId], gameVersionId: $patchId) {
+                winWeek(take: 1, bracketIds: [$bracketId]) {
                   heroId
                   matchCount
                   winCount
-                  pickCount
-                  banCount
                 }
               }
             }
@@ -100,14 +98,18 @@ class StratzApiClient(private val tokenProvider: () -> String) {
         val text = query(q)
         val resp = json.decodeFromString<GraphQlResponse<HeroStatsData>>(text)
         if (resp.errors != null) throw ApiException(resp.errors.joinToString { it.message })
-        return resp.data?.heroStats?.stats ?: emptyList()
+        return resp.data?.heroStats?.winWeek ?: emptyList()
     }
 
-    suspend fun fetchHeroMatchups(heroId: Int, bracketId: String, patchId: Int): MatchupAdvantage? {
+    /**
+     * Fetch hero vs hero matchups.
+     * Uses heroVsHeroMatchup with bracketBasicIds (may need RankBracketBasicEnum values).
+     */
+    suspend fun fetchHeroMatchups(heroId: Int, bracketId: String): MatchupAdvantage? {
         val q = """
             query {
               heroStats {
-                heroVsHeroMatchup(heroId: $heroId, bracketIds: [$bracketId], gameVersionId: $patchId) {
+                heroVsHeroMatchup(heroId: $heroId, bracketBasicIds: [$bracketId]) {
                   advantage {
                     heroId
                     with { heroId2 matchCount winCount }

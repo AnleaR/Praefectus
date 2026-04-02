@@ -1,6 +1,5 @@
 package me.anlear.praefectus.data.api.models
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -55,7 +54,7 @@ data class ApiGameVersion(
     val name: String? = null
 )
 
-// --- Hero Stats ---
+// --- Hero Stats (winWeek) ---
 
 @Serializable
 data class HeroStatsData(
@@ -64,23 +63,21 @@ data class HeroStatsData(
 
 @Serializable
 data class HeroStatsWrapper(
-    val stats: List<ApiHeroStat>? = null,
-    val heroVsHeroMatchup: HeroVsHeroMatchup? = null
+    val winWeek: List<ApiHeroWinEntry>? = null,
+    val heroVsHeroMatchup: HeroMatchupType? = null
 )
 
 @Serializable
-data class ApiHeroStat(
+data class ApiHeroWinEntry(
     val heroId: Int,
-    val matchCount: Long,
-    val winCount: Long,
-    @SerialName("pickCount") val pickCount: Long = 0,
-    @SerialName("banCount") val banCount: Long = 0
+    val matchCount: Long = 0,
+    val winCount: Long = 0
 )
 
 // --- Hero Matchups ---
 
 @Serializable
-data class HeroVsHeroMatchup(
+data class HeroMatchupType(
     val advantage: List<MatchupAdvantage>? = null
 )
 

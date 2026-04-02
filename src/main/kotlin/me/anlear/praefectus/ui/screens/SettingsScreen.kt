@@ -41,7 +41,7 @@ fun SettingsScreen(
     ) {
         Text(
             Strings.get("settings", currentLang),
-            fontSize = 20.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = DotaColors.TextPrimary
         )
@@ -107,7 +107,8 @@ fun SettingsScreen(
                 onSelect = {
                     Config.rankBracket = it.apiName
                     onBracketChanged(it)
-                }
+                },
+                lang = currentLang
             )
         }
 
@@ -160,7 +161,7 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
             .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(8.dp))
             .padding(16.dp)
     ) {
-        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = DotaColors.TextPrimary)
+        Text(title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = DotaColors.TextPrimary)
         Spacer(Modifier.height(8.dp))
         content()
     }

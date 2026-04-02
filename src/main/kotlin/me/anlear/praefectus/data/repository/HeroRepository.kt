@@ -66,14 +66,15 @@ class HeroRepository(private val api: StratzApiClient) {
         HeroesTable.selectAll().map { row ->
             val rolesStr = row[HeroesTable.roles]
             val rolesList = try {
-                json.decodeFromString<List<String>>(rolesStr).mapNotNull { entry ->
+                json.decodeFromString<List<String>>(rolesStr).flatMap { entry ->
                     val parts = entry.split(":")
                     if (parts.size == 2) {
-                        DotaRole.fromApi(parts[0])?.let { role ->
-                            HeroRole(role, parts[1].toIntOrNull() ?: 0)
+                        val level = parts[1].toIntOrNull() ?: 0
+                        DotaRole.fromApiTag(parts[0], level).map { role ->
+                            HeroRole(role, level)
                         }
-                    } else null
-                }
+                    } else emptyList()
+                }.distinctBy { it.roleId }
             } catch (_: Exception) { emptyList() }
 
             Hero(
@@ -88,28 +89,6 @@ class HeroRepository(private val api: StratzApiClient) {
         }
     }
 
-    suspend fun getCurrentPatchId(forceRefresh: Boolean = false): Int {
-        if (!forceRefresh && isCacheValid("patch_id", CONST_TTL)) {
-            val cached = transaction {
-                CacheMetadataTable.selectAll().where { CacheMetadataTable.key eq "current_patch_id" }.firstOrNull()
-            }
-            if (cached != null) return cached[CacheMetadataTable.updatedAt].toInt()
-        }
-
-        val versions = api.fetchGameVersions()
-        val latestId = versions.maxByOrNull { it.id }?.id ?: throw Exception("No game versions found")
-
-        transaction {
-            CacheMetadataTable.deleteWhere { key eq "current_patch_id" }
-            CacheMetadataTable.insert {
-                it[key] = "current_patch_id"
-                it[updatedAt] = latestId.toLong()
-            }
-        }
-        updateCacheTimestamp("patch_id")
-        return latestId
-    }
-
     suspend fun getHeroStats(bracket: RankBracket, forceRefresh: Boolean = false): Map<Int, HeroStats> {
         val cacheKey = "stats_${bracket.apiName}"
         if (!forceRefresh && isCacheValid(cacheKey, STATS_TTL)) {
@@ -117,21 +96,15 @@ class HeroRepository(private val api: StratzApiClient) {
         }
 
         return try {
-            val patchId = getCurrentPatchId()
-            val stats = api.fetchHeroStats(bracket.apiName, patchId)
+            val stats = api.fetchHeroStats(bracket.apiName)
             transaction {
-                HeroStatsTable.deleteWhere {
-                    (HeroStatsTable.bracket eq bracket.apiName) and (HeroStatsTable.patchId eq patchId)
-                }
+                HeroStatsTable.deleteWhere { HeroStatsTable.bracket eq bracket.apiName }
                 for (s in stats) {
                     HeroStatsTable.insert {
                         it[heroId] = s.heroId
                         it[HeroStatsTable.bracket] = bracket.apiName
-                        it[HeroStatsTable.patchId] = patchId
                         it[matchCount] = s.matchCount
                         it[winCount] = s.winCount
-                        it[pickCount] = s.pickCount
-                        it[banCount] = s.banCount
                         it[updatedAt] = System.currentTimeMillis()
                     }
                 }
@@ -150,34 +123,29 @@ class HeroRepository(private val api: StratzApiClient) {
                 row[HeroStatsTable.heroId] to HeroStats(
                     heroId = row[HeroStatsTable.heroId],
                     matchCount = row[HeroStatsTable.matchCount],
-                    winCount = row[HeroStatsTable.winCount],
-                    pickCount = row[HeroStatsTable.pickCount],
-                    banCount = row[HeroStatsTable.banCount]
+                    winCount = row[HeroStatsTable.winCount]
                 )
             }
     }
 
     suspend fun getHeroMatchups(heroId: Int, bracket: RankBracket, forceRefresh: Boolean = false): List<HeroMatchup> {
-        val cacheKey = "matchups_${heroId}_${bracket.apiName}"
+        val cacheKey = "matchups_${heroId}_${bracket.basicApiName}"
         if (!forceRefresh && isCacheValid(cacheKey, STATS_TTL)) {
             return loadMatchupsFromCache(heroId, bracket)
         }
 
         return try {
-            val patchId = getCurrentPatchId()
-            val matchup = api.fetchHeroMatchups(heroId, bracket.apiName, patchId)
+            val matchup = api.fetchHeroMatchups(heroId, bracket.basicApiName)
             transaction {
                 HeroMatchupsTable.deleteWhere {
                     (HeroMatchupsTable.heroId eq heroId) and
-                        (HeroMatchupsTable.bracket eq bracket.apiName) and
-                        (HeroMatchupsTable.patchId eq patchId)
+                        (HeroMatchupsTable.bracket eq bracket.basicApiName)
                 }
                 matchup?.with?.forEach { entry ->
                     HeroMatchupsTable.insert {
                         it[HeroMatchupsTable.heroId] = heroId
                         it[againstHeroId] = entry.heroId2
-                        it[HeroMatchupsTable.bracket] = bracket.apiName
-                        it[HeroMatchupsTable.patchId] = patchId
+                        it[HeroMatchupsTable.bracket] = bracket.basicApiName
                         it[HeroMatchupsTable.matchCount] = entry.matchCount
                         it[HeroMatchupsTable.winCount] = entry.winCount
                         it[isWith] = true
@@ -188,8 +156,7 @@ class HeroRepository(private val api: StratzApiClient) {
                     HeroMatchupsTable.insert {
                         it[HeroMatchupsTable.heroId] = heroId
                         it[againstHeroId] = entry.heroId2
-                        it[HeroMatchupsTable.bracket] = bracket.apiName
-                        it[HeroMatchupsTable.patchId] = patchId
+                        it[HeroMatchupsTable.bracket] = bracket.basicApiName
                         it[HeroMatchupsTable.matchCount] = entry.matchCount
                         it[HeroMatchupsTable.winCount] = entry.winCount
                         it[isWith] = false
@@ -207,7 +174,7 @@ class HeroRepository(private val api: StratzApiClient) {
 
     private fun loadMatchupsFromCache(heroId: Int, bracket: RankBracket): List<HeroMatchup> = transaction {
         HeroMatchupsTable.selectAll().where {
-            (HeroMatchupsTable.heroId eq heroId) and (HeroMatchupsTable.bracket eq bracket.apiName)
+            (HeroMatchupsTable.heroId eq heroId) and (HeroMatchupsTable.bracket eq bracket.basicApiName)
         }.map { row ->
             HeroMatchup(
                 heroId = row[HeroMatchupsTable.heroId],

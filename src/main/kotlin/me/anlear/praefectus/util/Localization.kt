@@ -42,6 +42,7 @@ object Strings {
         "offlane" to mapOf(Lang.RU to "Оффлейн", Lang.EN to "Offlane"),
         "support" to mapOf(Lang.RU to "Поддержка", Lang.EN to "Support"),
         "hard_support" to mapOf(Lang.RU to "Полная поддержка", Lang.EN to "Hard Support"),
+        "loading_matchups" to mapOf(Lang.RU to "Загрузка матчапов", Lang.EN to "Loading matchups"),
         "score" to mapOf(Lang.RU to "Оценка", Lang.EN to "Score"),
         "team_synergy" to mapOf(Lang.RU to "Синергия команды", Lang.EN to "Team Synergy"),
         "draft_score" to mapOf(Lang.RU to "Оценка драфта", Lang.EN to "Draft Score"),
@@ -64,6 +65,66 @@ object Strings {
         "no_token" to mapOf(Lang.RU to "Токен API не задан. Откройте настройки.", Lang.EN to "API token not set. Open settings."),
         "current_step" to mapOf(Lang.RU to "Текущий шаг", Lang.EN to "Current Step"),
         "phase" to mapOf(Lang.RU to "Фаза", Lang.EN to "Phase"),
+        "your_side" to mapOf(Lang.RU to "Ваша сторона", Lang.EN to "Your Side"),
+        "forces_of_light" to mapOf(Lang.RU to "Силы Света", Lang.EN to "Radiant"),
+        "forces_of_dark" to mapOf(Lang.RU to "Силы Тьмы", Lang.EN to "Dire"),
+        "rank_herald" to mapOf(Lang.RU to "Рекрут", Lang.EN to "Herald"),
+        "rank_guardian" to mapOf(Lang.RU to "Страж", Lang.EN to "Guardian"),
+        "rank_crusader" to mapOf(Lang.RU to "Рыцарь", Lang.EN to "Crusader"),
+        "rank_archon" to mapOf(Lang.RU to "Герой", Lang.EN to "Archon"),
+        "rank_legend" to mapOf(Lang.RU to "Легенда", Lang.EN to "Legend"),
+        "rank_ancient" to mapOf(Lang.RU to "Властелин", Lang.EN to "Ancient"),
+        "rank_divine" to mapOf(Lang.RU to "Божество", Lang.EN to "Divine"),
+        "rank_immortal" to mapOf(Lang.RU to "Титан", Lang.EN to "Immortal"),
+        "help" to mapOf(Lang.RU to "Помощь", Lang.EN to "Help"),
+        "help_title" to mapOf(Lang.RU to "Как пользоваться Praefectus", Lang.EN to "How to use Praefectus"),
+        "help_text" to mapOf(
+            Lang.RU to """
+1. Выберите режим драфта: AP (All Pick) или CM (Captains Mode).
+
+2. Выберите вашу сторону: Силы Света (Radiant) или Силы Тьмы (Dire).
+
+3. В режиме All Pick кликните на слот (пик или бан), затем выберите героя из пула внизу.
+
+4. В режиме Captains Mode герои назначаются автоматически по последовательности драфта CM.
+
+5. Рекомендации внизу показывают лучших героев на основе:
+   • Контрпик — насколько герой силён против вражеских пиков
+   • Синергия — насколько герой сочетается с союзниками
+   • Мета — текущий винрейт героя в выбранном ранге
+
+6. Подсвеченные герои в пуле — лучшие по комбинированной оценке (мета + рекомендации). Подсвечиваются только герои тира A и выше.
+
+7. Значки с номерами на иконках героев показывают их позицию в топ-10 рекомендаций.
+
+8. Тир-лист (вкладка слева) показывает всех героев отсортированных по винрейту для текущего ранга.
+
+9. В настройках можно изменить API токен, язык, ранг и обновить данные.
+            """.trimIndent(),
+            Lang.EN to """
+1. Select draft mode: AP (All Pick) or CM (Captains Mode).
+
+2. Choose your side: Radiant or Dire.
+
+3. In All Pick mode, click a slot (pick or ban), then select a hero from the pool below.
+
+4. In Captains Mode, heroes are assigned automatically following the CM draft sequence.
+
+5. Recommendations at the bottom show the best heroes based on:
+   • Counter — how strong the hero is against enemy picks
+   • Synergy — how well the hero works with your allies
+   • Meta — the hero's current win rate at the selected rank
+
+6. Highlighted heroes in the pool are the best by combined score (meta + recommendations). Only tier A and above heroes are highlighted.
+
+7. Numbered badges on hero icons show their position in the top 10 recommendations.
+
+8. The Tier List tab (left sidebar) shows all heroes sorted by win rate for the current rank.
+
+9. In Settings, you can change the API token, language, rank bracket, and update data.
+            """.trimIndent()
+        ),
+        "close" to mapOf(Lang.RU to "Закрыть", Lang.EN to "Close"),
     )
 
     fun get(key: String, lang: Lang): String = strings[key]?.get(lang) ?: key

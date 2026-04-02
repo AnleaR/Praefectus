@@ -43,28 +43,34 @@ data class HeroRole(
     val level: Int
 )
 
-enum class DotaRole(val id: String, val locKey: String) {
-    CARRY("CORE", "carry"),
-    MID("MID", "mid"),
-    OFFLANE("OFFLANE", "offlane"),
-    SUPPORT("SUPPORT", "support"),
-    HARD_SUPPORT("HARD_SUPPORT", "hard_support");
+enum class DotaRole(val locKey: String) {
+    CARRY("carry"),
+    MID("mid"),
+    OFFLANE("offlane"),
+    SUPPORT("support"),
+    HARD_SUPPORT("hard_support");
 
     companion object {
-        fun fromApi(roleId: String): DotaRole? = entries.find { it.id.equals(roleId, ignoreCase = true) }
+        /**
+         * Map STRATZ hero role tags to Dota 2 lane positions.
+         * A single STRATZ tag may map to one or more lane roles.
+         */
+        fun fromApiTag(tag: String, level: Int): List<DotaRole> = when (tag.uppercase()) {
+            "CARRY" -> listOf(CARRY)
+            "NUKER" -> listOf(MID)
+            "INITIATOR", "DURABLE" -> listOf(OFFLANE)
+            "SUPPORT" -> if (level >= 2) listOf(SUPPORT, HARD_SUPPORT) else listOf(SUPPORT)
+            else -> emptyList()
+        }
     }
 }
 
 data class HeroStats(
     val heroId: Int,
     val matchCount: Long,
-    val winCount: Long,
-    val pickCount: Long,
-    val banCount: Long
+    val winCount: Long
 ) {
     val winRate: Double get() = if (matchCount > 0) winCount.toDouble() / matchCount * 100 else 0.0
-    val pickRate: Double get() = pickCount.toDouble()
-    val banRate: Double get() = banCount.toDouble()
 }
 
 data class HeroMatchup(
@@ -77,15 +83,21 @@ data class HeroMatchup(
     val winRate: Double get() = if (matchCount > 0) winCount.toDouble() / matchCount * 100 else 0.0
 }
 
-enum class RankBracket(val apiName: String, val display: String, val iconIndex: Int) {
-    HERALD("HERALD", "Herald", 1),
-    GUARDIAN("GUARDIAN", "Guardian", 2),
-    CRUSADER("CRUSADER", "Crusader", 3),
-    ARCHON("ARCHON", "Archon", 4),
-    LEGEND("LEGEND", "Legend", 5),
-    ANCIENT("ANCIENT", "Ancient", 6),
-    DIVINE("DIVINE", "Divine", 7),
-    IMMORTAL("IMMORTAL", "Immortal", 8);
+enum class RankBracket(
+    val apiName: String,
+    val display: String,
+    val iconIndex: Int,
+    val locKey: String,
+    val basicApiName: String // for bracketBasicIds (RankBracketBasicEnum)
+) {
+    HERALD("HERALD", "Herald", 1, "rank_herald", "HERALD_GUARDIAN"),
+    GUARDIAN("GUARDIAN", "Guardian", 2, "rank_guardian", "HERALD_GUARDIAN"),
+    CRUSADER("CRUSADER", "Crusader", 3, "rank_crusader", "CRUSADER_ARCHON"),
+    ARCHON("ARCHON", "Archon", 4, "rank_archon", "CRUSADER_ARCHON"),
+    LEGEND("LEGEND", "Legend", 5, "rank_legend", "LEGEND_ANCIENT"),
+    ANCIENT("ANCIENT", "Ancient", 6, "rank_ancient", "LEGEND_ANCIENT"),
+    DIVINE("DIVINE", "Divine", 7, "rank_divine", "DIVINE_IMMORTAL"),
+    IMMORTAL("IMMORTAL", "Immortal", 8, "rank_immortal", "DIVINE_IMMORTAL");
 
     companion object {
         fun fromString(s: String): RankBracket =

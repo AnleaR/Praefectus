@@ -1,5 +1,6 @@
 package me.anlear.praefectus.ui.navigation
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.anlear.praefectus.ui.theme.DotaColors
@@ -36,7 +39,7 @@ fun NavigationRail(
 ) {
     Column(
         modifier = modifier
-            .width(64.dp)
+            .width(72.dp)
             .fillMaxHeight()
             .background(DotaColors.BackgroundSecondary)
             .border(width = 1.dp, color = DotaColors.SurfaceBorder)
@@ -44,13 +47,13 @@ fun NavigationRail(
         verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // App logo area — use a Dota-style sword/shield icon
-        Icon(
-            imageVector = Icons.Default.Security,
+        // App logo
+        Image(
+            painter = painterResource("icon_white.png"),
             contentDescription = "Praefectus",
-            tint = DotaColors.Accent,
+            contentScale = ContentScale.Fit,
             modifier = Modifier
-                .size(32.dp)
+                .size(48.dp)
                 .padding(bottom = 4.dp)
         )
 
@@ -85,12 +88,12 @@ fun NavItem(screen: Screen, isSelected: Boolean, lang: Lang, onClick: () -> Unit
             imageVector = screen.icon,
             contentDescription = Strings.get(screen.locKey, lang),
             tint = color,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(Modifier.height(2.dp))
         Text(
             Strings.get(screen.locKey, lang),
-            fontSize = 9.sp,
+            fontSize = 11.sp,
             color = color,
             maxLines = 1
         )
