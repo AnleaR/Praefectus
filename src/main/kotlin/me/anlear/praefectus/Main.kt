@@ -1,6 +1,7 @@
 package me.anlear.praefectus
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
@@ -31,6 +32,8 @@ import me.anlear.praefectus.ui.theme.PraefectusTheme
 import me.anlear.praefectus.util.Config
 import me.anlear.praefectus.util.Lang
 import me.anlear.praefectus.util.Strings
+import java.awt.Desktop
+import java.net.URI
 
 fun main() = application {
     DatabaseFactory.init()
@@ -43,6 +46,7 @@ fun main() = application {
     var currentScreen by remember { mutableStateOf(Screen.DRAFT) }
     var showTokenDialog by remember { mutableStateOf(Config.apiToken.isBlank()) }
     var supportBonus by remember { mutableStateOf(Config.supportBonus) }
+    var supportBonusValue by remember { mutableStateOf(Config.supportBonusValue) }
 
     val initialPlacement = if (Config.windowMaximized) WindowPlacement.Maximized else WindowPlacement.Floating
     val initialPosition = if (Config.windowX >= 0 && Config.windowY >= 0)
@@ -138,7 +142,8 @@ fun main() = application {
                             heroRepository = heroRepository,
                             bracket = bracket,
                             lang = lang,
-                            supportBonus = supportBonus
+                            supportBonus = supportBonus,
+                            supportBonusValue = supportBonusValue
                         )
                         Screen.TIER_LIST -> TierListScreen(
                             heroRepository = heroRepository,
@@ -152,7 +157,9 @@ fun main() = application {
                             onLangChanged = { lang = it },
                             onBracketChanged = { bracket = it },
                             supportBonus = supportBonus,
-                            onSupportBonusChanged = { supportBonus = it }
+                            onSupportBonusChanged = { supportBonus = it },
+                            supportBonusValue = supportBonusValue,
+                            onSupportBonusValueChanged = { supportBonusValue = it }
                         )
                     }
                 }
@@ -165,6 +172,7 @@ fun main() = application {
 @Composable
 fun TokenDialog(lang: Lang, onTokenSaved: (String) -> Unit, onDismiss: () -> Unit) {
     var tokenInput by remember { mutableStateOf("") }
+    var linkMessage by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -185,8 +193,20 @@ fun TokenDialog(lang: Lang, onTokenSaved: (String) -> Unit, onDismiss: () -> Uni
                 Text(
                     "https://stratz.com/api",
                     color = DotaColors.Accent,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    modifier = Modifier.clickable {
+                        try {
+                            Desktop.getDesktop().browse(URI("https://stratz.com/api"))
+                            linkMessage = Strings.get("link_opened", lang)
+                        } catch (_: Exception) {
+                            linkMessage = "https://stratz.com/api"
+                        }
+                    }
                 )
+                linkMessage?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, color = DotaColors.Accent, fontSize = 11.sp)
+                }
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = tokenInput,

@@ -179,6 +179,7 @@ data class HeroRecommendation(
     val totalScore: Double,
     val counterScore: Double,
     val synergyScore: Double,
+    val supportScore: Double,
     val metaScore: Double,
     val winRate: Double
 )

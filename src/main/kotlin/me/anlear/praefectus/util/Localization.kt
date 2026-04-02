@@ -138,8 +138,16 @@ object Strings {
         "better_draft" to mapOf(Lang.RU to "Лучший драфт", Lang.EN to "Better Draft"),
         "support_bonus" to mapOf(Lang.RU to "Бонус поддержки", Lang.EN to "Support Bonus"),
         "support_bonus_desc" to mapOf(
-            Lang.RU to "Добавить +3.0 балла героям поддержки в первых 2 пиках",
-            Lang.EN to "Add +3.0 score to support heroes in first 2 picks"
+            Lang.RU to "Добавить баллов героям поддержки в первых 2 пиках",
+            Lang.EN to "Add score to support heroes in first 2 picks"
+        ),
+        "support_bonus_value" to mapOf(
+            Lang.RU to "Кол-во очков:",
+            Lang.EN to "Score amount:"
+        ),
+        "link_opened" to mapOf(
+            Lang.RU to "Ссылка открыта в браузере. Скопируйте токен и вставьте его сюда.",
+            Lang.EN to "Link opened in browser. Copy the token and paste it here."
         ),
     )
 

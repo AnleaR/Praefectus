@@ -95,20 +95,21 @@ fun HeroPoolIcon(
         // Use graphicsLayer for scale — does NOT affect layout measurement
         Box(
             modifier = Modifier
+                .fillMaxWidth()
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     clip = false
                 }
-                .clip(RoundedCornerShape(4.dp))
-                .border(1.5.dp, borderColor, RoundedCornerShape(4.dp))
+                .clip(RoundedCornerShape(3.dp))
+                .border(1.dp, borderColor, RoundedCornerShape(3.dp))
                 .background(DotaColors.Surface)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false }
                 .clickable(onClick = if (isDisabled) onUndoClick else onClick),
             contentAlignment = Alignment.Center
         ) {
-            HeroIcon(hero = hero, size = 42, grayscale = isDisabled)
+            HeroIcon(hero = hero, size = 42, grayscale = isDisabled, fillWidth = true)
 
             // Block icon overlay on hover for disabled (picked/banned) heroes
             if (isDisabled && isHovered) {
@@ -220,8 +221,11 @@ object HeroImageCache {
     }
 }
 
+/**
+ * @param fillWidth if true, fills parent width and uses aspectRatio instead of fixed size
+ */
 @Composable
-fun HeroIcon(hero: Hero, size: Int = 48, grayscale: Boolean = false, modifier: Modifier = Modifier) {
+fun HeroIcon(hero: Hero, size: Int = 48, grayscale: Boolean = false, fillWidth: Boolean = false, modifier: Modifier = Modifier) {
     var bitmap by remember(hero.id) { mutableStateOf<ImageBitmap?>(null) }
     var loading by remember(hero.id) { mutableStateOf(true) }
 
@@ -231,9 +235,14 @@ fun HeroIcon(hero: Hero, size: Int = 48, grayscale: Boolean = false, modifier: M
         loading = false
     }
 
-    // Dota 2 hero portraits are 16:9ish (127×71 on Valve CDN)
+    // Dota 2 hero portraits are ~1.78:1 (127×71 on Valve CDN)
     val iconWidth = (size * 1.78).toInt()
-    Box(modifier = modifier.size(iconWidth.dp, size.dp), contentAlignment = Alignment.Center) {
+    val sizeModifier = if (fillWidth) {
+        modifier.fillMaxWidth().aspectRatio(1.78f)
+    } else {
+        modifier.size(iconWidth.dp, size.dp)
+    }
+    Box(modifier = sizeModifier, contentAlignment = Alignment.Center) {
         when {
             bitmap != null -> Image(
                 bitmap = bitmap!!,

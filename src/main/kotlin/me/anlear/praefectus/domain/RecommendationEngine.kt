@@ -16,7 +16,8 @@ class RecommendationEngine(
         statsMap: Map<Int, HeroStats>,
         matchupsMap: Map<Int, List<HeroMatchup>>,
         roleFilter: DotaRole? = null,
-        supportBonus: Boolean = false
+        supportBonus: Boolean = false,
+        supportBonusValue: Double = 3.0
     ): List<HeroRecommendation> {
         val excluded = draftState.allPickedOrBanned
         val allies = if (team == DraftTeam.RADIANT) draftState.radiantPicks else draftState.direPicks
@@ -40,7 +41,8 @@ class RecommendationEngine(
                 // Bonus for support/hard support heroes in first 2 picks
                 val roleBonus = if (applySupportBonus &&
                     hero.roles.any { it.roleId == DotaRole.SUPPORT || it.roleId == DotaRole.HARD_SUPPORT }
-                ) supportBonusValue else 0.0
+                ) supportBonusValue
+                else 0.0
 
                 val totalScore = counterScore * counterWeight + synergyScore * synergyWeight + metaScore + roleBonus
 
@@ -49,6 +51,7 @@ class RecommendationEngine(
                     totalScore = totalScore,
                     counterScore = counterScore * counterWeight,
                     synergyScore = synergyScore * synergyWeight,
+                    supportScore = roleBonus,
                     metaScore = metaScore,
                     winRate = heroWinRate
                 )

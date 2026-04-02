@@ -11,9 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import me.anlear.praefectus.domain.models.*
 import me.anlear.praefectus.ui.theme.DotaColors
 import me.anlear.praefectus.util.Lang
@@ -156,35 +158,44 @@ fun AttributeGroup(
             Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
         }
 
-        // Heroes grid: FlowRow so all heroes are siblings for correct zIndex on hover
-        val remainder = heroes.size % 6
-        val spacerCount = if (remainder > 0) 6 - remainder else 0
-
-        @OptIn(ExperimentalLayoutApi::class)
-        FlowRow(
+        // Heroes grid: 6 icons per row, using Column+Row with graphicsLayer(clip=false)
+        // so hover scale/tooltip can overflow without being clipped
+        val rows = heroes.chunked(6)
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer { clip = false }
                 .background(DotaColors.BackgroundSecondary.copy(alpha = 0.3f))
                 .border(1.dp, color.copy(alpha = 0.1f), RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
-                .padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-            maxItemsInEachRow = 6
+                .padding(2.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            heroes.forEach { hero ->
-                HeroPoolIcon(
-                    hero = hero,
-                    isDisabled = hero.id in disabledIds,
-                    tierRank = tierMap[hero.id],
-                    recommendRank = recommendRanks[hero.id],
-                    onClick = { onHeroClick(hero) },
-                    onUndoClick = { onHeroUndoClick(hero) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            // Fill last row to 6 so items are evenly sized
-            repeat(spacerCount) {
-                Spacer(Modifier.weight(1f))
+            rows.forEachIndexed { rowIndex, rowHeroes ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer { clip = false }
+                        // Last row gets higher zIndex so tooltip shows above nothing;
+                        // reversed so bottom rows are on top for tooltip visibility
+                        .zIndex((rows.size - rowIndex).toFloat())
+                ) {
+                    rowHeroes.forEach { hero ->
+                        HeroPoolIcon(
+                            hero = hero,
+                            isDisabled = hero.id in disabledIds,
+                            tierRank = tierMap[hero.id],
+                            recommendRank = recommendRanks[hero.id],
+                            onClick = { onHeroClick(hero) },
+                            onUndoClick = { onHeroUndoClick(hero) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    // Fill remaining slots so layout is even
+                    repeat(6 - rowHeroes.size) {
+                        Spacer(Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

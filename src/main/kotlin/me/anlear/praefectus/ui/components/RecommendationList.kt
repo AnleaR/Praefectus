@@ -53,7 +53,7 @@ fun RecommendationRow(
     onClick: () -> Unit
 ) {
     val scoreColor = when {
-        rec.totalScore > 5 -> DotaColors.ScoreGood
+        rec.totalScore > 4 -> DotaColors.ScoreGood
         rec.totalScore > 0 -> DotaColors.ScoreNeutral
         else -> DotaColors.ScoreBad
     }
@@ -75,13 +75,14 @@ fun RecommendationRow(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ScoreChip(Strings.get("counter", lang), rec.counterScore, DotaColors.Dire)
                 ScoreChip(Strings.get("synergy", lang), rec.synergyScore, DotaColors.Radiant)
+                ScoreChip(Strings.get("support_bonus", lang), rec.supportScore, DotaColors.Accent)
                 ScoreChip(Strings.get("meta", lang), rec.metaScore, DotaColors.Accent)
             }
         }
 
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                "${"%.1f".format(rec.totalScore)}",
+                "%.1f".format(rec.totalScore),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = scoreColor

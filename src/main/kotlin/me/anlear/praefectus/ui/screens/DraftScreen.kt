@@ -22,7 +22,7 @@ import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.DialogWindow
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import me.anlear.praefectus.data.repository.HeroRepository
 import me.anlear.praefectus.domain.DraftEngine
 import me.anlear.praefectus.domain.RecommendationEngine
@@ -44,6 +44,7 @@ fun DraftScreen(
     bracket: RankBracket,
     lang: Lang,
     supportBonus: Boolean = false,
+    supportBonusValue: Double = 3.0,
     modifier: Modifier = Modifier
 ) {
     val draftEngine = remember { DraftEngine() }
@@ -121,9 +122,9 @@ fun DraftScreen(
         }
     }
 
-    val recommendations = remember(draftState, matchupsMap, statsMap, yourSide, supportBonus) {
+    val recommendations = remember(draftState, matchupsMap, statsMap, yourSide, supportBonus, supportBonusValue) {
         if (heroes.isEmpty()) emptyList()
-        else recommendationEngine.recommend(heroes, draftState, yourSide, statsMap, matchupsMap, null, supportBonus)
+        else recommendationEngine.recommend(heroes, draftState, yourSide, statsMap, matchupsMap, null, supportBonus, supportBonusValue)
     }
 
     // Build heroId -> recommendation rank map (top 10 get badges on icons)
@@ -187,12 +188,8 @@ fun DraftScreen(
         }
     }
 
-    // Help dialog — outside Column to avoid hierarchy crash
-    if (showHelpDialog) {
-        HelpDialog(lang = lang, onDismiss = { showHelpDialog = false })
-    }
-
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
+    Box(modifier = modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
         if (loading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -293,7 +290,13 @@ fun DraftScreen(
                 onHeroClick = { heroId -> heroMap[heroId]?.let { onHeroClick(it) } }
             )
         }
+    } // end Column
+
+    // Help overlay — rendered inside the same Box to avoid hierarchy issues (CMP-2326)
+    if (showHelpDialog) {
+        HelpOverlay(lang = lang, onDismiss = { showHelpDialog = false })
     }
+    } // end Box
 }
 
 /**
@@ -596,17 +599,17 @@ fun HorizontalPickSlot(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(width = 72.dp, height = 40.dp)
+                .size(width = 64.dp, height = 36.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(bgColor)
-                .border(1.5.dp, borderColor, RoundedCornerShape(4.dp))
+                .border(1.dp, borderColor, RoundedCornerShape(4.dp))
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false }
                 .clickable(onClick = if (hero != null) onUndoClick else onClick),
             contentAlignment = Alignment.Center
         ) {
             if (hero != null) {
-                HeroIcon(hero = hero, size = 36)
+                HeroIcon(hero = hero, size = 32)
                 // Block overlay on hover
                 if (isHovered) {
                     Box(
@@ -639,7 +642,7 @@ fun HorizontalPickSlot(
                 fontSize = 10.sp,
                 color = DotaColors.TextSecondary,
                 maxLines = 1,
-                modifier = Modifier.widthIn(max = 72.dp)
+                modifier = Modifier.widthIn(max = 64.dp)
             )
         }
     }
@@ -814,10 +817,13 @@ fun TopRecommendationsBar(
                         color = scoreColor
                     )
 
-                    // Breakdown: counter / synergy / meta / WR
+                    // Breakdown: counter / synergy / support bonus / meta / WR
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         ScoreLabel(Strings.get("counter", lang), rec.counterScore, DotaColors.Dire)
                         ScoreLabel(Strings.get("synergy", lang), rec.synergyScore, DotaColors.Radiant)
+                        if (rec.supportScore > 0) {
+                            ScoreLabel(Strings.get("support_bonus", lang), rec.supportScore, DotaColors.Accent)
+                        }
                         ScoreLabel(Strings.get("meta", lang), rec.metaScore, DotaColors.ScoreNeutral)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -859,24 +865,34 @@ private fun ScoreLabel(label: String, value: Double, color: Color) {
 }
 
 /**
- * Help dialog explaining how to use the app.
- * Uses DialogWindow to avoid "layouts are not part of the same hierarchy" crash.
+ * Help overlay — rendered as a modal overlay inside the same window hierarchy.
+ * Avoids "layouts are not part of the same hierarchy" error (CMP-2326).
  */
 @Composable
-fun HelpDialog(lang: Lang, onDismiss: () -> Unit) {
-    DialogWindow(
-        onCloseRequest = onDismiss,
-        title = Strings.get("help_title", lang),
-        resizable = false,
-        state = androidx.compose.ui.window.rememberDialogState(
-            width = 540.dp,
-            height = 500.dp
-        )
+fun HelpOverlay(lang: Lang, onDismiss: () -> Unit) {
+    // Semi-transparent backdrop
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
     ) {
+        // Dialog card — clickable with no-op to prevent backdrop click-through
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 540.dp)
+                .heightIn(max = 500.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(DotaColors.BackgroundSecondary)
+                .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(12.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { /* consume click */ }
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -894,7 +910,15 @@ fun HelpDialog(lang: Lang, onDismiss: () -> Unit) {
                     fontSize = 13.sp,
                     color = DotaColors.TextPrimary,
                     lineHeight = 20.sp,
-                    modifier = Modifier.verticalScroll(scrollState)
+                    modifier = Modifier.fillMaxWidth().padding(end = 12.dp).verticalScroll(scrollState)
+                )
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(scrollState),
+                    style = LocalScrollbarStyle.current.copy(
+                        unhoverColor = DotaColors.TextSecondary.copy(alpha = 0.3f),
+                        hoverColor = DotaColors.TextSecondary.copy(alpha = 0.6f)
+                    )
                 )
             }
 

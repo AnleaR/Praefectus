@@ -2,6 +2,7 @@ package me.anlear.praefectus.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,6 +21,8 @@ import me.anlear.praefectus.ui.theme.DotaColors
 import me.anlear.praefectus.util.Config
 import me.anlear.praefectus.util.Lang
 import me.anlear.praefectus.util.Strings
+import java.awt.Desktop
+import java.net.URI
 
 @Composable
 fun SettingsScreen(
@@ -30,6 +33,8 @@ fun SettingsScreen(
     onBracketChanged: (RankBracket) -> Unit,
     supportBonus: Boolean,
     onSupportBonusChanged: (Boolean) -> Unit,
+    supportBonusValue: Double,
+    onSupportBonusValueChanged: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -78,7 +83,16 @@ fun SettingsScreen(
                     "https://stratz.com/api",
                     fontSize = 12.sp,
                     color = DotaColors.Accent,
-                    modifier = Modifier.align(Alignment.CenterVertically)
+                    modifier = Modifier
+                        .align(Alignment.CenterVertically)
+                        .clickable {
+                            try {
+                                Desktop.getDesktop().browse(URI("https://stratz.com/api"))
+                                statusMessage = Strings.get("link_opened", currentLang)
+                            } catch (_: Exception) {
+                                statusMessage = "https://stratz.com/api"
+                            }
+                        }
                 )
             }
         }
@@ -175,6 +189,40 @@ fun SettingsScreen(
                     fontSize = 13.sp,
                     color = DotaColors.TextSecondary
                 )
+            }
+
+            if (supportBonus) {
+                Spacer(Modifier.height(8.dp))
+                var bonusText by remember { mutableStateOf(supportBonusValue.toString()) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        Strings.get("support_bonus_value", currentLang),
+                        fontSize = 13.sp,
+                        color = DotaColors.TextSecondary
+                    )
+                    OutlinedTextField(
+                        value = bonusText,
+                        onValueChange = { newValue ->
+                            bonusText = newValue
+                            newValue.toDoubleOrNull()?.let { parsed ->
+                                Config.supportBonusValue = parsed
+                                onSupportBonusValueChanged(parsed)
+                            }
+                        },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = DotaColors.TextPrimary,
+                            unfocusedTextColor = DotaColors.TextPrimary,
+                            focusedBorderColor = DotaColors.Accent,
+                            unfocusedBorderColor = DotaColors.SurfaceBorder,
+                            cursorColor = DotaColors.Accent,
+                        ),
+                        modifier = Modifier.width(80.dp)
+                    )
+                }
             }
         }
     }
