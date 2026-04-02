@@ -16,10 +16,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogWindow
 import me.anlear.praefectus.data.repository.HeroRepository
 import me.anlear.praefectus.domain.DraftEngine
 import me.anlear.praefectus.domain.RecommendationEngine
@@ -40,6 +43,7 @@ fun DraftScreen(
     heroRepository: HeroRepository,
     bracket: RankBracket,
     lang: Lang,
+    supportBonus: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val draftEngine = remember { DraftEngine() }
@@ -117,9 +121,9 @@ fun DraftScreen(
         }
     }
 
-    val recommendations = remember(draftState, matchupsMap, statsMap, yourSide) {
+    val recommendations = remember(draftState, matchupsMap, statsMap, yourSide, supportBonus) {
         if (heroes.isEmpty()) emptyList()
-        else recommendationEngine.recommend(heroes, draftState, yourSide, statsMap, matchupsMap, null)
+        else recommendationEngine.recommend(heroes, draftState, yourSide, statsMap, matchupsMap, null, supportBonus)
     }
 
     // Build heroId -> recommendation rank map (top 10 get badges on icons)
@@ -176,6 +180,18 @@ fun DraftScreen(
         }
     }
 
+    fun onHeroUndoClick(hero: Hero) {
+        draftState = draftEngine.removeSpecificHero(draftState, hero.id)
+        if (draftMode == DraftMode.ALL_PICK && selectedSlot != null) {
+            selectedSlot = findNextEmptySlot(draftState, selectedSlot!!, yourSide)
+        }
+    }
+
+    // Help dialog — outside Column to avoid hierarchy crash
+    if (showHelpDialog) {
+        HelpDialog(lang = lang, onDismiss = { showHelpDialog = false })
+    }
+
     Column(modifier = modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 4.dp)) {
         if (loading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -193,11 +209,6 @@ fun DraftScreen(
                 Text("${Strings.get("error", lang)}: $error", color = DotaColors.Dire)
             }
             return@Column
-        }
-
-        // Help dialog
-        if (showHelpDialog) {
-            HelpDialog(lang = lang, onDismiss = { showHelpDialog = false })
         }
 
         // ===== TOP SECTION: Toolbar + Draft Slots =====
@@ -237,7 +248,7 @@ fun DraftScreen(
 
         Spacer(Modifier.height(4.dp))
 
-        // Draft picks/bans — horizontal layout at top
+        // Draft picks/bans — horizontal layout at top with draft analysis
         DraftBoardHorizontal(
             draftState = draftState,
             heroes = heroMap,
@@ -245,8 +256,15 @@ fun DraftScreen(
             yourSide = yourSide,
             draftMode = draftMode,
             lang = lang,
+            statsMap = statsMap,
+            matchupsMap = matchupsMap,
+            recommendationEngine = recommendationEngine,
+            allHeroes = heroes,
             onSlotClick = { slot ->
                 if (draftMode == DraftMode.ALL_PICK) selectedSlot = slot
+            },
+            onHeroUndoClick = { heroId ->
+                heroMap[heroId]?.let { onHeroUndoClick(it) }
             }
         )
 
@@ -262,6 +280,7 @@ fun DraftScreen(
             recommendRanks = recommendRanks,
             lang = lang,
             onHeroClick = { onHeroClick(it) },
+            onHeroUndoClick = { onHeroUndoClick(it) },
             modifier = Modifier.weight(1f)
         )
 
@@ -278,8 +297,8 @@ fun DraftScreen(
 }
 
 /**
- * Draft board — Radiant picks (5 slots) | Bans | Dire picks (5 slots)
- * All horizontal at the top of the screen.
+ * Draft board — Radiant picks (5 slots) | Bans + analysis | Dire picks (5 slots)
+ * All horizontal at the top of the screen with draft analysis under each team's picks.
  */
 @Composable
 fun DraftBoardHorizontal(
@@ -289,8 +308,21 @@ fun DraftBoardHorizontal(
     yourSide: DraftTeam,
     draftMode: DraftMode,
     lang: Lang,
-    onSlotClick: (SlotSelection) -> Unit
+    statsMap: Map<Int, HeroStats>,
+    matchupsMap: Map<Int, List<HeroMatchup>>,
+    recommendationEngine: RecommendationEngine,
+    allHeroes: List<Hero>,
+    onSlotClick: (SlotSelection) -> Unit,
+    onHeroUndoClick: (Int) -> Unit = {}
 ) {
+    // Calculate draft analysis for both teams
+    val radiantAnalysis = remember(draftState.radiantPicks, draftState.direPicks, matchupsMap, statsMap) {
+        calculateTeamAnalysis(draftState.radiantPicks, draftState.direPicks, matchupsMap, statsMap)
+    }
+    val direAnalysis = remember(draftState.direPicks, draftState.radiantPicks, matchupsMap, statsMap) {
+        calculateTeamAnalysis(draftState.direPicks, draftState.radiantPicks, matchupsMap, statsMap)
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -298,45 +330,187 @@ fun DraftBoardHorizontal(
             .background(DotaColors.BackgroundSecondary)
             .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(6.dp))
             .padding(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Radiant picks
-        TeamPicksRow(
-            team = DraftTeam.RADIANT,
-            teamLabel = Strings.get("forces_of_light", lang),
-            picks = draftState.radiantPicks,
-            heroes = heroes,
-            selectedSlot = selectedSlot,
-            isYourSide = yourSide == DraftTeam.RADIANT,
-            teamColor = DotaColors.Radiant,
-            lang = lang,
-            onSlotClick = onSlotClick,
-            modifier = Modifier.weight(1f)
-        )
+        // Radiant picks + analysis
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            TeamPicksRow(
+                team = DraftTeam.RADIANT,
+                teamLabel = Strings.get("forces_of_light", lang),
+                picks = draftState.radiantPicks,
+                heroes = heroes,
+                selectedSlot = selectedSlot,
+                isYourSide = yourSide == DraftTeam.RADIANT,
+                teamColor = DotaColors.Radiant,
+                lang = lang,
+                onSlotClick = onSlotClick,
+                onHeroUndoClick = onHeroUndoClick
+            )
+            if (draftState.radiantPicks.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                TeamAnalysisRow(radiantAnalysis, DotaColors.Radiant, lang)
+            }
+        }
 
-        // Bans in center
-        BansRow(
-            bans = draftState.bans,
-            heroes = heroes,
-            selectedSlot = selectedSlot,
-            draftMode = draftMode,
-            lang = lang,
-            onSlotClick = onSlotClick
-        )
+        // Bans in center + draft advantage
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            BansRow(
+                bans = draftState.bans,
+                heroes = heroes,
+                selectedSlot = selectedSlot,
+                draftMode = draftMode,
+                lang = lang,
+                onSlotClick = onSlotClick,
+                onHeroUndoClick = onHeroUndoClick
+            )
 
-        // Dire picks
-        TeamPicksRow(
-            team = DraftTeam.DIRE,
-            teamLabel = Strings.get("forces_of_dark", lang),
-            picks = draftState.direPicks,
-            heroes = heroes,
-            selectedSlot = selectedSlot,
-            isYourSide = yourSide == DraftTeam.DIRE,
-            teamColor = DotaColors.Dire,
-            lang = lang,
-            onSlotClick = onSlotClick,
-            modifier = Modifier.weight(1f)
+            // Draft advantage indicator
+            if (draftState.radiantPicks.isNotEmpty() && draftState.direPicks.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                DraftAdvantageIndicator(radiantAnalysis, direAnalysis, lang)
+            }
+        }
+
+        // Dire picks + analysis
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            TeamPicksRow(
+                team = DraftTeam.DIRE,
+                teamLabel = Strings.get("forces_of_dark", lang),
+                picks = draftState.direPicks,
+                heroes = heroes,
+                selectedSlot = selectedSlot,
+                isYourSide = yourSide == DraftTeam.DIRE,
+                teamColor = DotaColors.Dire,
+                lang = lang,
+                onSlotClick = onSlotClick,
+                onHeroUndoClick = onHeroUndoClick
+            )
+            if (draftState.direPicks.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                TeamAnalysisRow(direAnalysis, DotaColors.Dire, lang)
+            }
+        }
+    }
+}
+
+data class TeamAnalysis(
+    val counterScore: Double = 0.0,
+    val synergyScore: Double = 0.0,
+    val metaScore: Double = 0.0
+) {
+    val totalScore: Double get() = counterScore + synergyScore + metaScore
+}
+
+private fun calculateTeamAnalysis(
+    teamPicks: List<Int>,
+    enemyPicks: List<Int>,
+    matchupsMap: Map<Int, List<HeroMatchup>>,
+    statsMap: Map<Int, HeroStats>
+): TeamAnalysis {
+    if (teamPicks.isEmpty()) return TeamAnalysis()
+
+    var counterTotal = 0.0
+    var synergyTotal = 0.0
+    var metaTotal = 0.0
+
+    for (heroId in teamPicks) {
+        // Counter score vs enemies
+        if (enemyPicks.isNotEmpty()) {
+            val heroMatchups = matchupsMap[heroId]
+            if (heroMatchups != null) {
+                for (enemyId in enemyPicks) {
+                    val vs = heroMatchups.find { it.otherHeroId == enemyId && !it.isWith }
+                    if (vs != null && vs.matchCount > 0) {
+                        counterTotal += vs.winRate - 50.0
+                    }
+                }
+            }
+        }
+
+        // Synergy score with allies
+        val heroMatchups = matchupsMap[heroId]
+        if (heroMatchups != null) {
+            for (allyId in teamPicks) {
+                if (allyId == heroId) continue
+                val withMatchup = heroMatchups.find { it.otherHeroId == allyId && it.isWith }
+                if (withMatchup != null && withMatchup.matchCount > 0) {
+                    synergyTotal += withMatchup.winRate - 50.0
+                }
+            }
+        }
+
+        // Meta score
+        val stats = statsMap[heroId]
+        if (stats != null) {
+            metaTotal += stats.winRate - 50.0
+        }
+    }
+
+    // Synergy is counted from both sides, divide by 2
+    return TeamAnalysis(
+        counterScore = counterTotal,
+        synergyScore = synergyTotal / 2.0,
+        metaScore = metaTotal
+    )
+}
+
+@Composable
+private fun TeamAnalysisRow(analysis: TeamAnalysis, teamColor: Color, lang: Lang) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AnalysisChip(Strings.get("counter", lang).take(3), analysis.counterScore, teamColor)
+        AnalysisChip(Strings.get("synergy", lang).take(3), analysis.synergyScore, teamColor)
+        AnalysisChip(Strings.get("meta", lang), analysis.metaScore, teamColor)
+    }
+}
+
+@Composable
+private fun AnalysisChip(label: String, value: Double, teamColor: Color) {
+    val valueColor = when {
+        value > 1 -> DotaColors.ScoreGood
+        value < -1 -> DotaColors.ScoreBad
+        else -> DotaColors.TextSecondary
+    }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(3.dp))
+            .background(teamColor.copy(alpha = 0.08f))
+            .padding(horizontal = 4.dp, vertical = 1.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, fontSize = 9.sp, color = DotaColors.TextSecondary)
+        Text("%+.1f".format(value), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = valueColor)
+    }
+}
+
+@Composable
+private fun DraftAdvantageIndicator(radiantAnalysis: TeamAnalysis, direAnalysis: TeamAnalysis, lang: Lang) {
+    val radiantTotal = radiantAnalysis.totalScore
+    val direTotal = direAnalysis.totalScore
+    val diff = radiantTotal - direTotal
+    // Rough win probability: sigmoid based on score difference
+    val radiantWinProb = (50.0 + diff * 1.5).coerceIn(20.0, 80.0)
+
+    val betterTeam = if (diff >= 0) Strings.get("forces_of_light", lang) else Strings.get("forces_of_dark", lang)
+    val betterColor = if (diff >= 0) DotaColors.Radiant else DotaColors.Dire
+    val winProb = if (diff >= 0) radiantWinProb else 100.0 - radiantWinProb
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            betterTeam,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = betterColor
+        )
+        Text(
+            "${"%.0f".format(winProb)}%",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = betterColor
         )
     }
 }
@@ -352,9 +526,9 @@ fun TeamPicksRow(
     teamColor: Color,
     lang: Lang,
     onSlotClick: (SlotSelection) -> Unit,
-    modifier: Modifier = Modifier
+    onHeroUndoClick: (Int) -> Unit = {}
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         // Team label
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(teamLabel, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = teamColor)
@@ -388,23 +562,29 @@ fun TeamPicksRow(
                     isSelected = isSlotSelected,
                     onClick = {
                         if (hero == null) onSlotClick(SlotSelection(team, DraftActionType.PICK, i))
-                    }
+                    },
+                    onUndoClick = { heroId?.let { onHeroUndoClick(it) } }
                 )
             }
         }
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun HorizontalPickSlot(
     hero: Hero?,
     index: Int,
     teamColor: Color,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onUndoClick: () -> Unit = {}
 ) {
+    var isHovered by remember { mutableStateOf(false) }
+
     val borderColor = when {
         isSelected -> DotaColors.Accent
+        hero != null && isHovered -> DotaColors.Dire
         hero != null -> teamColor.copy(alpha = 0.5f)
         else -> DotaColors.SurfaceBorder
     }
@@ -420,11 +600,29 @@ fun HorizontalPickSlot(
                 .clip(RoundedCornerShape(4.dp))
                 .background(bgColor)
                 .border(1.5.dp, borderColor, RoundedCornerShape(4.dp))
-                .clickable(enabled = hero == null, onClick = onClick),
+                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                .onPointerEvent(PointerEventType.Exit) { isHovered = false }
+                .clickable(onClick = if (hero != null) onUndoClick else onClick),
             contentAlignment = Alignment.Center
         ) {
             if (hero != null) {
                 HeroIcon(hero = hero, size = 36)
+                // Block overlay on hover
+                if (isHovered) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(Color.Black.copy(alpha = 0.4f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Block,
+                            contentDescription = null,
+                            tint = DotaColors.Dire,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             } else {
                 Text(
                     "${index + 1}",
@@ -454,7 +652,8 @@ fun BansRow(
     selectedSlot: SlotSelection?,
     draftMode: DraftMode,
     lang: Lang,
-    onSlotClick: (SlotSelection) -> Unit
+    onSlotClick: (SlotSelection) -> Unit,
+    onHeroUndoClick: (Int) -> Unit = {}
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(Strings.get("bans", lang), fontSize = 12.sp, color = DotaColors.TextSecondary)
@@ -491,8 +690,12 @@ fun BansRow(
                                         },
                                         RoundedCornerShape(3.dp)
                                     )
-                                    .clickable(enabled = hero == null) {
-                                        onSlotClick(SlotSelection(DraftTeam.RADIANT, DraftActionType.BAN, i))
+                                    .clickable {
+                                        if (hero != null) {
+                                            onHeroUndoClick(hero.id)
+                                        } else {
+                                            onSlotClick(SlotSelection(DraftTeam.RADIANT, DraftActionType.BAN, i))
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -516,7 +719,8 @@ fun BansRow(
                                 .size(24.dp)
                                 .clip(RoundedCornerShape(3.dp))
                                 .background(DotaColors.Dire.copy(alpha = 0.1f))
-                                .border(1.dp, DotaColors.Dire.copy(alpha = 0.3f), RoundedCornerShape(3.dp)),
+                                .border(1.dp, DotaColors.Dire.copy(alpha = 0.3f), RoundedCornerShape(3.dp))
+                                .clickable { onHeroUndoClick(heroId) },
                             contentAlignment = Alignment.Center
                         ) {
                             HeroIcon(hero = hero, size = 18)
@@ -656,16 +860,23 @@ private fun ScoreLabel(label: String, value: Double, color: Color) {
 
 /**
  * Help dialog explaining how to use the app.
+ * Uses DialogWindow to avoid "layouts are not part of the same hierarchy" crash.
  */
 @Composable
 fun HelpDialog(lang: Lang, onDismiss: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
+    DialogWindow(
+        onCloseRequest = onDismiss,
+        title = Strings.get("help_title", lang),
+        resizable = false,
+        state = androidx.compose.ui.window.rememberDialogState(
+            width = 540.dp,
+            height = 500.dp
+        )
+    ) {
         Column(
             modifier = Modifier
-                .width(500.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .fillMaxSize()
                 .background(DotaColors.BackgroundSecondary)
-                .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(12.dp))
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -677,7 +888,7 @@ fun HelpDialog(lang: Lang, onDismiss: () -> Unit) {
             )
 
             val scrollState = rememberScrollState()
-            Box(modifier = Modifier.heightIn(max = 400.dp)) {
+            Box(modifier = Modifier.weight(1f)) {
                 Text(
                     Strings.get("help_text", lang),
                     fontSize = 13.sp,
@@ -730,8 +941,8 @@ private fun DraftToolbar(
                 .clip(RoundedCornerShape(6.dp))
                 .border(1.dp, DotaColors.SurfaceBorder, RoundedCornerShape(6.dp))
         ) {
-            SegmentButton("AP", draftMode == DraftMode.ALL_PICK) { onModeChange(DraftMode.ALL_PICK) }
-            SegmentButton("CM", draftMode == DraftMode.CAPTAINS_MODE) { onModeChange(DraftMode.CAPTAINS_MODE) }
+            SegmentButton(Strings.get("all_pick", lang), draftMode == DraftMode.ALL_PICK) { onModeChange(DraftMode.ALL_PICK) }
+            SegmentButton(Strings.get("captains_mode", lang), draftMode == DraftMode.CAPTAINS_MODE) { onModeChange(DraftMode.CAPTAINS_MODE) }
         }
 
         // Side selector

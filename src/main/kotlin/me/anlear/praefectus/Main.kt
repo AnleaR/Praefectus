@@ -42,6 +42,7 @@ fun main() = application {
     var bracket by remember { mutableStateOf(RankBracket.fromString(Config.rankBracket)) }
     var currentScreen by remember { mutableStateOf(Screen.DRAFT) }
     var showTokenDialog by remember { mutableStateOf(Config.apiToken.isBlank()) }
+    var supportBonus by remember { mutableStateOf(Config.supportBonus) }
 
     val initialPlacement = if (Config.windowMaximized) WindowPlacement.Maximized else WindowPlacement.Floating
     val initialPosition = if (Config.windowX >= 0 && Config.windowY >= 0)
@@ -136,7 +137,8 @@ fun main() = application {
                         Screen.DRAFT -> DraftScreen(
                             heroRepository = heroRepository,
                             bracket = bracket,
-                            lang = lang
+                            lang = lang,
+                            supportBonus = supportBonus
                         )
                         Screen.TIER_LIST -> TierListScreen(
                             heroRepository = heroRepository,
@@ -148,7 +150,9 @@ fun main() = application {
                             currentLang = lang,
                             currentBracket = bracket,
                             onLangChanged = { lang = it },
-                            onBracketChanged = { bracket = it }
+                            onBracketChanged = { bracket = it },
+                            supportBonus = supportBonus,
+                            onSupportBonusChanged = { supportBonus = it }
                         )
                     }
                 }

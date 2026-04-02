@@ -80,13 +80,13 @@ object Strings {
         "help_title" to mapOf(Lang.RU to "Как пользоваться Praefectus", Lang.EN to "How to use Praefectus"),
         "help_text" to mapOf(
             Lang.RU to """
-1. Выберите режим драфта: AP (All Pick) или CM (Captains Mode).
+1. Выберите режим драфта: All Pick или Captains Mode.
 
 2. Выберите вашу сторону: Силы Света (Radiant) или Силы Тьмы (Dire).
 
 3. В режиме All Pick кликните на слот (пик или бан), затем выберите героя из пула внизу.
 
-4. В режиме Captains Mode герои назначаются автоматически по последовательности драфта CM.
+4. В режиме Captains Mode герои назначаются автоматически по последовательности драфта.
 
 5. Рекомендации внизу показывают лучших героев на основе:
    • Контрпик — насколько герой силён против вражеских пиков
@@ -97,12 +97,16 @@ object Strings {
 
 7. Значки с номерами на иконках героев показывают их позицию в топ-10 рекомендаций.
 
-8. Тир-лист (вкладка слева) показывает всех героев отсортированных по винрейту для текущего ранга.
+8. Нажмите на уже выбранного/забаненного героя в пуле, чтобы отменить его выбор.
 
-9. В настройках можно изменить API токен, язык, ранг и обновить данные.
+9. Под пиками каждой команды отображается анализ драфта: контрпик, синергия и мета.
+
+10. Тир-лист (вкладка слева) показывает всех героев отсортированных по винрейту для текущего ранга.
+
+11. В настройках можно изменить API токен, язык, ранг и обновить данные.
             """.trimIndent(),
             Lang.EN to """
-1. Select draft mode: AP (All Pick) or CM (Captains Mode).
+1. Select draft mode: All Pick or Captains Mode.
 
 2. Choose your side: Radiant or Dire.
 
@@ -119,12 +123,24 @@ object Strings {
 
 7. Numbered badges on hero icons show their position in the top 10 recommendations.
 
-8. The Tier List tab (left sidebar) shows all heroes sorted by win rate for the current rank.
+8. Click on a picked/banned hero in the pool to undo their selection.
 
-9. In Settings, you can change the API token, language, rank bracket, and update data.
+9. Draft analysis is shown under each team's picks: counter, synergy, and meta scores.
+
+10. The Tier List tab (left sidebar) shows all heroes sorted by win rate for the current rank.
+
+11. In Settings, you can change the API token, language, rank bracket, and update data.
             """.trimIndent()
         ),
         "close" to mapOf(Lang.RU to "Закрыть", Lang.EN to "Close"),
+        "draft_advantage" to mapOf(Lang.RU to "Преимущество драфта", Lang.EN to "Draft Advantage"),
+        "win_probability" to mapOf(Lang.RU to "Вероятность победы", Lang.EN to "Win Probability"),
+        "better_draft" to mapOf(Lang.RU to "Лучший драфт", Lang.EN to "Better Draft"),
+        "support_bonus" to mapOf(Lang.RU to "Бонус поддержки", Lang.EN to "Support Bonus"),
+        "support_bonus_desc" to mapOf(
+            Lang.RU to "Добавить +3.0 балла героям поддержки в первых 2 пиках",
+            Lang.EN to "Add +3.0 score to support heroes in first 2 picks"
+        ),
     )
 
     fun get(key: String, lang: Lang): String = strings[key]?.get(lang) ?: key

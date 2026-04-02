@@ -5,7 +5,8 @@ import me.anlear.praefectus.domain.models.*
 class RecommendationEngine(
     private val counterWeight: Double = 1.5,
     private val synergyWeight: Double = 1.0,
-    private val metaWeight: Double = 0.5
+    private val metaWeight: Double = 0.5,
+    private val supportBonusValue: Double = 3.0
 ) {
 
     fun recommend(
@@ -14,11 +15,15 @@ class RecommendationEngine(
         team: DraftTeam,
         statsMap: Map<Int, HeroStats>,
         matchupsMap: Map<Int, List<HeroMatchup>>,
-        roleFilter: DotaRole? = null
+        roleFilter: DotaRole? = null,
+        supportBonus: Boolean = false
     ): List<HeroRecommendation> {
         val excluded = draftState.allPickedOrBanned
         val allies = if (team == DraftTeam.RADIANT) draftState.radiantPicks else draftState.direPicks
         val enemies = if (team == DraftTeam.RADIANT) draftState.direPicks else draftState.radiantPicks
+
+        // Support bonus: first 2 picks of your team
+        val applySupportBonus = supportBonus && allies.size < 2
 
         return allHeroes
             .filter { it.id !in excluded }
@@ -31,7 +36,13 @@ class RecommendationEngine(
                 val heroStats = statsMap[hero.id]
                 val heroWinRate = heroStats?.winRate ?: 50.0
                 val metaScore = (heroWinRate - 50.0) * metaWeight
-                val totalScore = counterScore * counterWeight + synergyScore * synergyWeight + metaScore
+
+                // Bonus for support/hard support heroes in first 2 picks
+                val roleBonus = if (applySupportBonus &&
+                    hero.roles.any { it.roleId == DotaRole.SUPPORT || it.roleId == DotaRole.HARD_SUPPORT }
+                ) supportBonusValue else 0.0
+
+                val totalScore = counterScore * counterWeight + synergyScore * synergyWeight + metaScore + roleBonus
 
                 HeroRecommendation(
                     hero = hero,

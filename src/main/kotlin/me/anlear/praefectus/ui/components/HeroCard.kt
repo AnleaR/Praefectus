@@ -7,7 +7,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +18,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
@@ -35,9 +40,20 @@ import me.anlear.praefectus.ui.theme.DotaColors
 import java.net.URI
 import javax.imageio.ImageIO
 
+// Grayscale color matrix (saturation = 0)
+private val GrayscaleMatrix = ColorMatrix(
+    floatArrayOf(
+        0.33f, 0.33f, 0.33f, 0f, 0f,
+        0.33f, 0.33f, 0.33f, 0f, 0f,
+        0.33f, 0.33f, 0.33f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f
+    )
+)
+
 /**
  * Compact hero icon for the hero pool grid.
  * Only shows the hero portrait. On hover: scales up and shows displayName below.
+ * Disabled heroes (picked/banned) show grayscale + block icon on hover, click undoes them.
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -45,12 +61,13 @@ fun HeroPoolIcon(
     hero: Hero,
     isDisabled: Boolean = false,
     tierRank: TierRank? = null,
-    recommendRank: Int? = null, // 1-based rank in recommendations, null if not recommended
+    recommendRank: Int? = null,
     onClick: () -> Unit = {},
+    onUndoClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isHovered by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (isHovered && !isDisabled) 1.25f else 1.0f)
+    val scale by animateFloatAsState(if (isHovered) 1.25f else 1.0f)
 
     val tierColor = tierRank?.let {
         when (it) {
@@ -63,35 +80,52 @@ fun HeroPoolIcon(
     }
 
     val borderColor = when {
+        isDisabled && isHovered -> DotaColors.Dire.copy(alpha = 0.7f)
         isDisabled -> Color.Transparent
         isHovered -> DotaColors.Accent
         tierColor != null -> tierColor.copy(alpha = 0.5f)
         else -> DotaColors.SurfaceBorder.copy(alpha = 0.3f)
     }
 
-    val alpha = if (isDisabled) 0.2f else 1.0f
-
     Box(
         modifier = modifier
             .zIndex(if (isHovered) 10f else 0f),
         contentAlignment = Alignment.TopCenter
     ) {
-        // Use graphicsLayer for scale so it does NOT affect layout measurement
+        // Use graphicsLayer for scale — does NOT affect layout measurement
         Box(
             modifier = Modifier
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
+                    clip = false
                 }
                 .clip(RoundedCornerShape(4.dp))
                 .border(1.5.dp, borderColor, RoundedCornerShape(4.dp))
-                .background(DotaColors.Surface.copy(alpha = alpha))
+                .background(DotaColors.Surface)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false }
-                .then(if (!isDisabled) Modifier.clickable(onClick = onClick) else Modifier),
+                .clickable(onClick = if (isDisabled) onUndoClick else onClick),
             contentAlignment = Alignment.Center
         ) {
-            HeroIcon(hero = hero, size = 42)
+            HeroIcon(hero = hero, size = 42, grayscale = isDisabled)
+
+            // Block icon overlay on hover for disabled (picked/banned) heroes
+            if (isDisabled && isHovered) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Block,
+                        contentDescription = null,
+                        tint = DotaColors.Dire,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
 
             // Tier indicator — thin line at bottom
             if (tierColor != null && !isDisabled) {
@@ -125,7 +159,7 @@ fun HeroPoolIcon(
             }
         }
 
-        // Hero name tooltip shown on hover — absolutely positioned, doesn't affect layout
+        // Hero name tooltip on hover (not for disabled heroes — they show block icon instead)
         if (isHovered && !isDisabled) {
             Text(
                 hero.displayName,
@@ -136,12 +170,13 @@ fun HeroPoolIcon(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .offset(y = 42.dp)
+                    .graphicsLayer { clip = false }
+                    .offset(y = 46.dp)
                     .widthIn(max = 90.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(DotaColors.Surface.copy(alpha = 0.9f))
-                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                    .background(DotaColors.Surface.copy(alpha = 0.95f))
+                    .border(1.dp, DotaColors.SurfaceBorder.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             )
         }
     }
@@ -186,7 +221,7 @@ object HeroImageCache {
 }
 
 @Composable
-fun HeroIcon(hero: Hero, size: Int = 48, modifier: Modifier = Modifier) {
+fun HeroIcon(hero: Hero, size: Int = 48, grayscale: Boolean = false, modifier: Modifier = Modifier) {
     var bitmap by remember(hero.id) { mutableStateOf<ImageBitmap?>(null) }
     var loading by remember(hero.id) { mutableStateOf(true) }
 
@@ -204,7 +239,8 @@ fun HeroIcon(hero: Hero, size: Int = 48, modifier: Modifier = Modifier) {
                 bitmap = bitmap!!,
                 contentDescription = hero.displayName,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                colorFilter = if (grayscale) ColorFilter.colorMatrix(GrayscaleMatrix) else null
             )
             loading -> CircularProgressIndicator(
                 modifier = Modifier.size((size / 2).dp),

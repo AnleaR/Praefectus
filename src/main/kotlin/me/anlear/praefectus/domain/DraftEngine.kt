@@ -84,6 +84,20 @@ class DraftEngine {
         }
     }
 
+    /**
+     * Remove a specific hero from the draft without affecting other heroes.
+     */
+    fun removeSpecificHero(state: DraftState, heroId: Int): DraftState {
+        val removedCount = state.history.count { it.heroId == heroId }
+        return state.copy(
+            radiantPicks = state.radiantPicks - heroId,
+            direPicks = state.direPicks - heroId,
+            bans = state.bans - heroId,
+            history = state.history.filter { it.heroId != heroId },
+            cmStepIndex = if (state.mode == DraftMode.CAPTAINS_MODE) state.cmStepIndex - removedCount else state.cmStepIndex
+        )
+    }
+
     fun reset(mode: DraftMode): DraftState = DraftState(mode = mode)
 
     fun calculateTeamSynergy(

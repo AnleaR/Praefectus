@@ -72,6 +72,13 @@ object Config {
             save()
         }
 
+    var supportBonus: Boolean
+        get() = props.getProperty("support_bonus", "true").toBoolean()
+        set(value) {
+            props.setProperty("support_bonus", value.toString())
+            save()
+        }
+
     private fun save() {
         configFile.outputStream().use { props.store(it, "Praefectus Config") }
     }

@@ -32,6 +32,7 @@ fun HeroGridWithAttributes(
     recommendRanks: Map<Int, Int>, // heroId -> 1-based rank
     lang: Lang,
     onHeroClick: (Hero) -> Unit,
+    onHeroUndoClick: (Hero) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchText by remember { mutableStateOf("") }
@@ -83,6 +84,7 @@ fun HeroGridWithAttributes(
                     tierMap = tierMap,
                     recommendRanks = recommendRanks,
                     onHeroClick = onHeroClick,
+                    onHeroUndoClick = onHeroUndoClick,
                     modifier = Modifier.weight(1f)
                 )
                 AttributeGroup(
@@ -93,6 +95,7 @@ fun HeroGridWithAttributes(
                     tierMap = tierMap,
                     recommendRanks = recommendRanks,
                     onHeroClick = onHeroClick,
+                    onHeroUndoClick = onHeroUndoClick,
                     modifier = Modifier.weight(1f)
                 )
                 AttributeGroup(
@@ -103,6 +106,7 @@ fun HeroGridWithAttributes(
                     tierMap = tierMap,
                     recommendRanks = recommendRanks,
                     onHeroClick = onHeroClick,
+                    onHeroUndoClick = onHeroUndoClick,
                     modifier = Modifier.weight(1f)
                 )
                 AttributeGroup(
@@ -113,6 +117,7 @@ fun HeroGridWithAttributes(
                     tierMap = tierMap,
                     recommendRanks = recommendRanks,
                     onHeroClick = onHeroClick,
+                    onHeroUndoClick = onHeroUndoClick,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -134,6 +139,7 @@ fun AttributeGroup(
     tierMap: Map<Int, TierRank>,
     recommendRanks: Map<Int, Int>,
     onHeroClick: (Hero) -> Unit,
+    onHeroUndoClick: (Hero) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -150,37 +156,35 @@ fun AttributeGroup(
             Text(label, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = color)
         }
 
-        // Heroes grid: 6 icons per row
-        val rows = heroes.chunked(6)
-        Column(
+        // Heroes grid: FlowRow so all heroes are siblings for correct zIndex on hover
+        val remainder = heroes.size % 6
+        val spacerCount = if (remainder > 0) 6 - remainder else 0
+
+        @OptIn(ExperimentalLayoutApi::class)
+        FlowRow(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
                 .background(DotaColors.BackgroundSecondary.copy(alpha = 0.3f))
                 .border(1.dp, color.copy(alpha = 0.1f), RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
                 .padding(3.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            maxItemsInEachRow = 6
         ) {
-            rows.forEach { rowHeroes ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    rowHeroes.forEach { hero ->
-                        HeroPoolIcon(
-                            hero = hero,
-                            isDisabled = hero.id in disabledIds,
-                            tierRank = tierMap[hero.id],
-                            recommendRank = recommendRanks[hero.id],
-                            onClick = { onHeroClick(hero) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    // Fill remaining slots so layout is even
-                    repeat(6 - rowHeroes.size) {
-                        Spacer(Modifier.weight(1f))
-                    }
-                }
+            heroes.forEach { hero ->
+                HeroPoolIcon(
+                    hero = hero,
+                    isDisabled = hero.id in disabledIds,
+                    tierRank = tierMap[hero.id],
+                    recommendRank = recommendRanks[hero.id],
+                    onClick = { onHeroClick(hero) },
+                    onUndoClick = { onHeroUndoClick(hero) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            // Fill last row to 6 so items are evenly sized
+            repeat(spacerCount) {
+                Spacer(Modifier.weight(1f))
             }
         }
     }

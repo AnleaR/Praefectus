@@ -28,6 +28,8 @@ fun SettingsScreen(
     currentBracket: RankBracket,
     onLangChanged: (Lang) -> Unit,
     onBracketChanged: (RankBracket) -> Unit,
+    supportBonus: Boolean,
+    onSupportBonusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -146,6 +148,33 @@ fun SettingsScreen(
                 statusMessage?.let {
                     Text(it, fontSize = 12.sp, color = DotaColors.TextSecondary)
                 }
+            }
+        }
+
+        // Support Bonus
+        SettingsSection(Strings.get("support_bonus", currentLang)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Switch(
+                    checked = supportBonus,
+                    onCheckedChange = {
+                        Config.supportBonus = it
+                        onSupportBonusChanged(it)
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = DotaColors.Accent,
+                        checkedTrackColor = DotaColors.Accent.copy(alpha = 0.3f),
+                        uncheckedThumbColor = DotaColors.TextSecondary,
+                        uncheckedTrackColor = DotaColors.Surface
+                    )
+                )
+                Text(
+                    Strings.get("support_bonus_desc", currentLang),
+                    fontSize = 13.sp,
+                    color = DotaColors.TextSecondary
+                )
             }
         }
     }

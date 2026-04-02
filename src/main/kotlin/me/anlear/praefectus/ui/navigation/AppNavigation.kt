@@ -53,7 +53,7 @@ fun NavigationRail(
             contentDescription = "Praefectus",
             contentScale = ContentScale.Fit,
             modifier = Modifier
-                .size(48.dp)
+                .size(64.dp)
                 .padding(bottom = 4.dp)
         )
 
